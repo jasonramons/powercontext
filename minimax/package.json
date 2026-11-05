@@ -1,0 +1,21 @@
+{
+  "name": "minimax-context-module",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Context module for AI coding assistants: seekdb retrieval + MiniMax code changes + PowerContext task state",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "ingest": "node src/cli.mjs ingest",
+    "context": "node src/cli.mjs context",
+    "fix": "node src/cli.mjs fix",
+    "state": "node src/cli.mjs state",
+    "test:demo": "node --test demo/test",
+    "smoke": "node src/cli.mjs smoke"
+  },
+  "dependencies": {
+    "@oceanbase/seekdb-node": "^1.4.0",
+    "express": "^4.21.2",
+    "seekdb": "^1.4.0"
+  }
+}
