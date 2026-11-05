@@ -1,0 +1,5 @@
+node_modules/
+data/
+.venv-pc/
+minimax-key.txt
+*.log
