@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>seekdb 迷你知识库 · 浏览器端向量化</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="dot"></span>
+          <h1>seekdb 迷你知识库</h1>
+          <span class="sub">浏览器端向量化 · seekdb 混合检索</span>
+        </div>
+        <div class="badges" id="badges">
+          <span class="badge" id="badge-device">后端探测中…</span>
+          <span class="badge" id="badge-model">模型加载中…</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="panel">
+          <h2>1 · 导入文档</h2>
+          <p class="hint">
+            文本在浏览器本地切分并向量化，向量与原文写入本地 seekdb；服务端只做存储与检索，不参与 embedding。
+          </p>
+          <div class="row">
+            <label class="file">
+              <input id="file-input" type="file" accept=".txt,.md,.markdown,text/plain" multiple />
+              <span>选择 txt / md 文件</span>
+            </label>
+            <button id="sample-btn" class="ghost">载入示例语料</button>
+            <span id="ingest-status" class="status"></span>
+          </div>
+          <ul id="doc-list" class="docs"></ul>
+        </section>
+
+        <section class="panel">
+          <h2>2 · 检索</h2>
+          <div class="row">
+            <input id="query-input" type="text" placeholder="例如：seekdb 的混合检索是怎么做的？" />
+            <select id="mode-select">
+              <option value="hybrid">混合检索（向量 + 全文，RRF）</option>
+              <option value="vector">纯向量检索</option>
+            </select>
+            <button id="search-btn">检索</button>
+          </div>
+          <div id="search-meta" class="status"></div>
+          <ol id="results" class="results"></ol>
+        </section>
+      </main>
+
+      <footer class="metrics">
+        <span id="metric-model"></span>
+        <span id="metric-count"></span>
+        <span id="metric-search"></span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
