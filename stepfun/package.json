@@ -1,0 +1,24 @@
+{
+  "name": "seekdb-stepfun-rag",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-side embedding + seekdb hybrid retrieval mini knowledge base",
+  "scripts": {
+    "dev:web": "vite",
+    "dev:server": "node server/index.mjs",
+    "build": "vite build",
+    "start": "node server/index.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.6",
+    "@oceanbase/seekdb-node": "^1.4.0",
+    "express": "^4.21.2",
+    "seekdb": "^1.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
