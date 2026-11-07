@@ -8,6 +8,7 @@
     "start": "node server/index.mjs",
     "bridge": "python bridge/app.py",
     "seed": "node scripts/seed.mjs",
+    "demo": "node scripts/build-demo.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
