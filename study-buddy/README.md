@@ -52,6 +52,46 @@ npm run smoke
 
 复习时点「答对了 / 答错了」：更新掌握度与下次到期时间，并把这次结果写入 PowerContext 记忆。
 
+## 用 Docker 运行（可选，当前有已知限制）
+
+镜像里同时打包了 Node 应用和 PowerContext 记忆桥，一个容器即可跑起来：
+
+```bash
+docker compose up --build -d        # 构建并后台启动
+docker compose logs -f              # 看日志
+curl http://127.0.0.1:8788/api/health
+docker compose down                 # 停止
+```
+
+数据持久化在 `./data`（`items.json`、`seekdb.db/`、`powercontext.db`）。
+
+推到你自己的 Docker Hub 供他人拉取：
+
+```bash
+docker build -t jasonramon/study-buddy:1.0.0 .
+docker push jasonramon/study-buddy:1.0.0
+docker run -p 8788:8788 -v study-data:/data jasonramon/study-buddy:1.0.0
+```
+
+### 已知限制（重要）
+
+在 **Linux** 上执行 `npm install` 会报：
+
+```
+npm error code EUNSUPPORTEDPROTOCOL
+npm error Unsupported URL Type "workspace:": workspace:*
+```
+
+这是 seekdb SDK 的 **Linux 平台可选依赖**在发布时带了 monorepo 的 `workspace:` 协议导致的（Windows/macOS 不受影响，本项目在 Windows 上已跑通）。因此容器镜像暂时无法在纯 Linux 环境构建。
+
+绕开方式（任选）：
+
+1. **不用 Docker**：按上面的「快速开始」在宿主机运行（已验证）；
+2. **外部 seekdb**：用官方 Linux 版 seekdb 起一个服务，把 `store.mjs` 改成连接已存在的 TCP 端点（需要小改，尚未实现）；
+3. **在 macOS/Windows 上构建镜像**：`docker build --platform=linux/amd64` 同样会触发该依赖解析，仍可能失败。
+
+> Docker 只是运行方式之一；Qoder 赛题要求的「网站」仍然要在 Qoder Sites 上发布（见 `docs/qoder-checklist.md`），静态演示页 `web/demo.html` 不需要任何后端。
+
 ## 静态演示页
 
 `web/demo.html` 是**单文件、自包含**的演示页（24 道示例题 + 同样的哈希向量检索，无外部依赖），适合直接发布到 Qoder Sites：
