@@ -1,0 +1,19 @@
+{
+  "name": "study-buddy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "错题/笔记复习助手：seekdb 混合检索 + PowerContext 薄弱点记忆",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "bridge": "python bridge/app.py",
+    "seed": "node scripts/seed.mjs",
+    "demo": "node scripts/build-demo.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@oceanbase/seekdb-node": "^1.4.0",
+    "express": "^4.21.2",
+    "seekdb": "^1.4.0"
+  }
+}

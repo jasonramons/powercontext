@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Study Buddy · 错题复习助手</title>
+<style>
+:root{--bg:#0f172a;--panel:#16213a;--panel2:#1d2b47;--text:#e6edf7;--muted:#93a4bd;--accent:#4f8cff;--ok:#34d399;--bad:#f87171;--border:#253552}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1b2b4d 0%,var(--bg) 55%);color:var(--text);font:14px/1.65 "Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 22px 60px}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid var(--border);padding-bottom:18px}
+.brand{display:flex;gap:14px;align-items:center}
+.logo{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#4f8cff,#7c5cff);font-weight:700}
+h1{margin:0;font-size:19px}
+.sub{margin:2px 0 0;color:var(--muted);font-size:12px}
+.badge{font-size:11px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.tabs{display:flex;gap:8px;margin:20px 0 16px;flex-wrap:wrap}
+.tab{background:transparent;color:var(--muted);border:1px solid transparent;padding:8px 14px;border-radius:10px;cursor:pointer;font:inherit}
+.tab.active{color:var(--text);background:var(--panel);border-color:var(--border)}
+.panel{display:none}.panel.active{display:block}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input,select{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 13px;font:inherit;outline:none;min-width:240px}
+input:focus{border-color:var(--accent)}
+button{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 15px;cursor:pointer;font:inherit}
+button.primary{background:linear-gradient(135deg,#4f8cff,#6f6bff);border:none;font-weight:600}
+.cards{display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px}
+.card h3{margin:0 0 6px;font-size:15px}
+.meta{color:var(--muted);font-size:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tag{background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:2px 10px;font-size:11px}
+.prompt{margin:10px 0;white-space:pre-wrap}
+.answer{margin:10px 0 0;white-space:pre-wrap;color:#cfe0ff;background:#14203a;border-left:3px solid var(--accent);padding:10px 12px;border-radius:8px}
+.bar{height:6px;border-radius:99px;background:#0d1830;overflow:hidden;margin-top:8px}
+.bar > i{display:block;height:100%;background:linear-gradient(90deg,#f87171,#fbbf24,#34d399)}
+.memory{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:22px}
+.memory h2{font-size:14px;margin:0 0 12px}
+.empty{color:var(--muted);font-size:13px}
+.note{background:#1a2740;border:1px dashed #34507d;border-radius:10px;padding:10px 12px;font-size:12px;color:#cfe0ff;margin-bottom:10px}
+footer{margin-top:36px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);padding-top:16px}
+footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">SB</div>
+      <div>
+        <h1>Study Buddy · 错题/笔记复习助手</h1>
+        <p class="sub">seekdb 混合检索 + PowerContext 薄弱点记忆 · 备考场景</p>
+      </div>
+    </div>
+    <span class="badge">静态演示 · 24 道示例题</span>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="search">相似题检索</button>
+    <button class="tab" data-tab="review">今日复习</button>
+    <button class="tab" data-tab="library">题库</button>
+  </div>
+
+  <section class="panel active" id="panel-search">
+    <div class="row">
+      <input id="q" placeholder="输入题干或关键词，例如：洛必达法则求极限"/>
+      <button class="primary" id="go">检索</button>
+    </div>
+    <p class="small muted" style="color:var(--muted);font-size:12px;margin:-6px 0 14px">
+      与本地版一致：384 维哈希向量 + 余弦相似度排序（线上版由 seekdb 的 HNSW 索引完成）。
+    </p>
+    <div id="results" class="cards"></div>
+  </section>
+
+  <section class="panel" id="panel-review">
+    <div class="row">
+      <select id="budget"><option value="10">10 分钟</option><option value="20" selected>20 分钟</option><option value="40">40 分钟</option></select>
+      <button class="primary" id="plan">生成今日复习清单</button>
+    </div>
+    <div id="planCards" class="cards"></div>
+  </section>
+
+  <section class="panel" id="panel-library">
+    <div class="row"><input id="filter" placeholder="按标题 / 知识点过滤"/><span id="count" class="meta"></span></div>
+    <div id="library" class="cards"></div>
+  </section>
+
+  <div class="memory">
+    <h2>PowerContext 薄弱点（示例记忆）</h2>
+    <div id="weak" class="cards"></div>
+  </div>
+
+  <footer>
+    演示页 · 数据为示例 · 完整功能见仓库
+    <a href="https://github.com/jasonramons/powercontext/tree/feat/qoder-study-buddy/study-buddy">study-buddy</a>
+  </footer>
+</div>
+
+<script>
+const ITEMS = [{"id":"q_math_001","title":"洛必达法则求极限","subject":"高等数学","knowledge":"洛必达法则","prompt":"求 lim(x→0) (e^x - 1 - x) / x^2","answer":"分子分母同为 0/0，先用一次洛必达得 (e^x-1)/(2x)，再用一次得 e^x/2 → 1/2","source":"错题本 2025-10","stats":{"attempts":4,"correct":1,"mastery":0.46,"intervalDays":1},"order":0},{"id":"q_math_002","title":"等价无穷小替换条件","subject":"高等数学","knowledge":"等价无穷小","prompt":"求 lim(x→0) (tan x - sin x)/x^3","answer":"tan x - sin x = tan x (1-cos x) ~ x·(x^2/2)=x^3/2，故极限为 1/2","source":"错题本 2025-10","stats":{"attempts":3,"correct":1,"mastery":0.47,"intervalDays":1},"order":1},{"id":"q_math_003","title":"定积分换元与对称性","subject":"高等数学","knowledge":"定积分","prompt":"计算 ∫_{-1}^{1} (x^3 cos x + 1) dx","answer":"x^3 cos x 是奇函数，积分为 0；剩下 ∫_{-1}^{1} 1 dx = 2","source":"课后习题","stats":{"attempts":2,"correct":1,"mastery":0.47,"intervalDays":1},"order":2},{"id":"q_math_004","title":"级数收敛判别","subject":"高等数学","knowledge":"级数收敛","prompt":"判断 ∑ 1/(n ln n) 是否收敛","answer":"用积分判别法，∫ 1/(x ln x) dx = ln ln x 发散，故级数发散","source":"错题本 2025-11","stats":{"attempts":1,"correct":0,"mastery":0.43,"intervalDays":1},"order":3},{"id":"q_math_005","title":"多元函数极值","subject":"高等数学","knowledge":"多元极值","prompt":"求 f(x,y)=x^2+y^2-4x+2y 的极值","answer":"驻点 (2,-1)，Hessian 正定，极小值 f(2,-1) = -5","source":"课后习题","stats":{"attempts":4,"correct":1,"mastery":0.44,"intervalDays":1},"order":4},{"id":"q_math_006","title":"隐函数求导","subject":"高等数学","knowledge":"隐函数求导","prompt":"由 x^2 + xy + y^2 = 3 求 y'","answer":"两边对 x 求导：2x + y + x y' + 2y y' = 0，得 y' = -(2x+y)/(x+2y)","source":"错题本 2025-09","stats":{"attempts":3,"correct":1,"mastery":0.44,"intervalDays":1},"order":5},{"id":"q_linalg_001","title":"特征值与特征向量","subject":"线性代数","knowledge":"特征值","prompt":"求矩阵 [[2,1],[1,2]] 的特征值","answer":"特征方程 (2-λ)^2-1=0，λ=1 或 3","source":"错题本 2025-10","stats":{"attempts":3,"correct":1,"mastery":0.35,"intervalDays":1},"order":6},{"id":"q_linalg_002","title":"相似对角化条件","subject":"线性代数","knowledge":"相似对角化","prompt":"判断矩阵 [[1,1],[0,1]] 能否对角化","answer":"不能：λ=1 是二重根但只有一个线性无关特征向量（几何重数 1 < 代数重数 2）","source":"错题本 2025-11","stats":{"attempts":4,"correct":1,"mastery":0.34,"intervalDays":1},"order":7},{"id":"q_linalg_003","title":"秩与解空间维数","subject":"线性代数","knowledge":"矩阵的秩","prompt":"3×5 矩阵 A 的秩为 3，求 Ax=0 解空间维数","answer":"维数 = 5 - 3 = 2","source":"课后习题","stats":{"attempts":1,"correct":0,"mastery":0.34,"intervalDays":1},"order":8},{"id":"q_linalg_004","title":"正交矩阵性质","subject":"线性代数","knowledge":"正交矩阵","prompt":"正交矩阵 Q 的行列式可能是多少","answer":"|Q| = ±1，因为 Q^T Q = I 两边取行列式得 |Q|^2 = 1","source":"错题本 2025-09","stats":{"attempts":2,"correct":1,"mastery":0.33,"intervalDays":1},"order":9},{"id":"q_linalg_005","title":"二次型正定判定","subject":"线性代数","knowledge":"二次型","prompt":"判断二次型 x^2 + 2xy + 2y^2 是否正定","answer":"对应矩阵 [[1,1],[1,2]]，顺序主子式 1>0、1>0，正定","source":"课后习题","stats":{"attempts":3,"correct":1,"mastery":0.33,"intervalDays":1},"order":10},{"id":"q_eng_001","title":"虚拟语气：与过去事实相反","subject":"英语","knowledge":"虚拟语气","prompt":"If I ___ (know) the answer, I would have told you.","answer":"had known —— 与过去事实相反，从句用 had done","source":"错题本 2025-10","stats":{"attempts":4,"correct":3,"mastery":0.77,"intervalDays":4},"order":11},{"id":"q_eng_002","title":"非谓语动词作状语","subject":"英语","knowledge":"非谓语","prompt":"___ (see) from the hill, the city looks beautiful.","answer":"Seen —— 城市是被看的，用过去分词作状语","source":"错题本 2025-10","stats":{"attempts":3,"correct":2,"mastery":0.78,"intervalDays":4},"order":12},{"id":"q_eng_003","title":"定语从句关系词选择","subject":"英语","knowledge":"定语从句","prompt":"This is the house ___ I lived in last year.","answer":"which/that —— 先行词是物且在从句中作宾语","source":"语法练习","stats":{"attempts":2,"correct":2,"mastery":0.78,"intervalDays":4},"order":13},{"id":"q_eng_004","title":"主谓一致：就近原则","subject":"英语","knowledge":"主谓一致","prompt":"Neither the students nor the teacher ___ (be) here.","answer":"is —— neither...nor 就近原则，谓语跟 teacher 一致","source":"错题本 2025-11","stats":{"attempts":1,"correct":1,"mastery":0.74,"intervalDays":4},"order":14},{"id":"q_eng_005","title":"倒装句：否定词提前","subject":"英语","knowledge":"倒装句","prompt":"Never ___ I seen such a beautiful sunset.","answer":"have —— never 置于句首引起部分倒装，助动词提前","source":"语法练习","stats":{"attempts":4,"correct":3,"mastery":0.75,"intervalDays":4},"order":15},{"id":"q_cs_001","title":"TCP 三次握手不是为了","subject":"计算机基础","knowledge":"TCP","prompt":"TCP 三次握手的主要目的是什么？为什么不是两次？","answer":"同步双方初始序列号并确认双向可达；两次握手无法防止历史重复连接请求造成的资源浪费","source":"错题本 2025-10","stats":{"attempts":4,"correct":3,"mastery":0.62,"intervalDays":4},"order":16},{"id":"q_cs_002","title":"进程与线程的区别","subject":"计算机基础","knowledge":"操作系统","prompt":"进程和线程的核心区别是什么？","answer":"进程是资源分配单位，线程是调度单位；同进程内线程共享地址空间，切换开销更小","source":"错题本 2025-09","stats":{"attempts":3,"correct":2,"mastery":0.63,"intervalDays":4},"order":17},{"id":"q_cs_003","title":"哈希冲突处理","subject":"计算机基础","knowledge":"数据结构","prompt":"开放定址法与链地址法处理哈希冲突各有什么优缺点？","answer":"开放定址法无指针开销但易聚集、删除麻烦；链地址法实现简单、负载因子高时性能稳定","source":"课后习题","stats":{"attempts":2,"correct":2,"mastery":0.64,"intervalDays":4},"order":18},{"id":"q_cs_004","title":"数据库事务隔离级别","subject":"计算机基础","knowledge":"事务隔离","prompt":"可重复读能避免幻读吗？InnoDB 怎么做的？","answer":"标准定义下不能；InnoDB 用 MVCC + 间隙锁（Next-Key Lock）在可重复读级别基本避免了幻读","source":"错题本 2025-11","stats":{"attempts":1,"correct":1,"mastery":0.64,"intervalDays":4},"order":19},{"id":"q_cs_005","title":"B+ 树与 B 树的区别","subject":"计算机基础","knowledge":"索引结构","prompt":"为什么数据库索引用 B+ 树而不是 B 树？","answer":"B+ 树非叶节点只存键、扇出更大树更矮；叶子节点链表支持范围扫描","source":"课后习题","stats":{"attempts":4,"correct":3,"mastery":0.65,"intervalDays":4},"order":20},{"id":"q_cs_006","title":"HTTP 缓存策略","subject":"计算机基础","knowledge":"HTTP 缓存","prompt":"强缓存和协商缓存的区别？各自用到哪些头部？","answer":"强缓存（Cache-Control/Expires）不发请求；协商缓存（ETag/If-None-Match、Last-Modified）发请求校验，命中返回 304","source":"错题本 2025-10","stats":{"attempts":3,"correct":2,"mastery":0.65,"intervalDays":4},"order":21},{"id":"q_cs_007","title":"虚拟内存与缺页中断","subject":"计算机基础","knowledge":"虚拟内存","prompt":"缺页中断发生时操作系统做了什么？","answer":"检查地址合法性，从磁盘换入页面（可能触发页面置换），更新页表，重新执行指令","source":"课后习题","stats":{"attempts":2,"correct":2,"mastery":0.66,"intervalDays":4},"order":22},{"id":"q_cs_008","title":"一致性哈希","subject":"计算机基础","knowledge":"分布式","prompt":"一致性哈希解决了什么问题？虚拟节点的作用？","answer":"解决节点增减导致的大规模重映射；虚拟节点让数据分布更均匀、负载更平衡","source":"错题本 2025-11","stats":{"attempts":1,"correct":1,"mastery":0.57,"intervalDays":1},"order":23}];
+const DIM = 384;
+function hash32(t){let h=2166136261>>>0;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0}return h>>>0}
+function tokens(text){const s=String(text||'').toLowerCase();const out=[];(s.match(/[a-z0-9]+/g)||[]).forEach(w=>{if(w.length>1)out.push('w:'+w)});(s.match(/[\u4e00-\u9fff]+/g)||[]).forEach(run=>{for(const ch of run)out.push('c:'+ch);for(let i=0;i+1<run.length;i++)out.push('b:'+run.slice(i,i+2))});return out}
+function embed(text){const v=new Float64Array(DIM);for(const t of tokens(text)){const h=hash32(t);v[h%DIM]+=1;v[(h>>>11)%DIM]+=0.5}let n=0;for(const x of v)n+=x*x;n=Math.sqrt(n)||1;return Array.from(v,x=>x/n)}
+function cosine(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s}
+const DOC = ITEMS.map(it=>embed([it.title,it.prompt,it.answer,it.knowledge].join('\n')));
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function card(it, extra){return '<article class="card"><h3>'+esc(it.title)+'</h3><div class="meta">'+
+  '<span class="tag">'+esc(it.subject)+'</span><span class="tag">'+esc(it.knowledge)+'</span>'+
+  (extra||'')+'</div><p class="prompt">'+esc(it.prompt)+'</p>'+
+  '<details><summary class="meta" style="cursor:pointer">查看答案解析</summary><p class="answer">'+esc(it.answer)+'</p></details></article>'}
+
+function search(){const q=document.getElementById('q').value.trim();if(!q)return;
+  const v=embed(q);const scored=ITEMS.map((it,i)=>({it,sim:cosine(v,DOC[i])})).sort((a,b)=>b.sim-a.sim).slice(0,5);
+  document.getElementById('results').innerHTML=scored.map((s,i)=>card(s.it,'<span class="tag">相似度 '+s.sim.toFixed(3)+'</span>')).join('')}
+
+function plan(){const minutes=Number(document.getElementById('budget').value);const slots=Math.floor(minutes/2);
+  const scored=ITEMS.map(it=>{const st=it.stats;const weakness=Math.min(1,Math.max(0,(1-st.mastery)*0.7+(1-(st.correct/Math.max(st.attempts,1)))*0.2+0.1));
+    return {it,weakness,priority:weakness*(st.intervalDays<=1?1.4:1)}}).sort((a,b)=>b.priority-a.priority).slice(0,slots);
+  document.getElementById('planCards').innerHTML=scored.map((s,i)=>card(s.it,
+    '<span class="tag">优先级 '+s.priority.toFixed(2)+'</span><span class="tag">掌握度 '+s.it.stats.mastery.toFixed(2)+'</span>')).join('')}
+
+function library(){const f=document.getElementById('filter').value.trim().toLowerCase();
+  const list=ITEMS.filter(it=>!f||[it.title,it.knowledge,it.prompt].join(' ').toLowerCase().includes(f));
+  document.getElementById('count').textContent=list.length+' / '+ITEMS.length+' 条';
+  document.getElementById('library').innerHTML=list.map(it=>'<article class="card"><h3>'+esc(it.title)+'</h3><div class="meta">'+
+    '<span class="tag">'+esc(it.subject)+'</span><span class="tag">'+esc(it.knowledge)+'</span><span class="tag">掌握度 '+it.stats.mastery.toFixed(2)+'</span></div>'+
+    '<div class="bar"><i style="width:'+Math.round(it.stats.mastery*100)+'%"></i></div></article>').join('')}
+
+function weak(){const top=[...ITEMS].sort((a,b)=>a.stats.mastery-b.stats.mastery).slice(0,4);
+  document.getElementById('weak').innerHTML='<div class="note">以下条目来自 PowerContext 记忆：每次答错都会写入一条「薄弱点：知识点（科目）最近答错，题目「…」」。</div>'+
+    top.map(it=>'<div class="card"><div class="meta"><span class="tag">'+esc(it.subject)+'</span>'+
+    '<span class="tag">掌握度 '+it.stats.mastery.toFixed(2)+'</span><span class="tag">答错 '+(it.stats.attempts-it.stats.correct)+' 次</span></div>'+
+    '<p class="prompt" style="margin:8px 0 0">薄弱点：'+esc(it.knowledge)+'（'+esc(it.subject)+'）最近答错，题目「'+esc(it.title)+'」</p></div>').join('')}
+
+document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===tab));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+tab.dataset.tab))}));
+document.getElementById('go').addEventListener('click',search);
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')search()});
+document.getElementById('plan').addEventListener('click',plan);
+document.getElementById('filter').addEventListener('input',library);
+document.getElementById('q').value='洛必达法则求极限';
+search();plan();library();weak();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+node_modules
+data/*.db
+data/*.db-*
+data/items.json
+data/*.log
+data/*.err.log
+.upload
+.git
+docs/screenshots

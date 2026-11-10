@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Study Buddy · 错题复习助手</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">SB</span>
+      <div>
+        <h1>Study Buddy</h1>
+        <p class="sub">错题 / 笔记复习助手 · seekdb 混合检索 + PowerContext 薄弱点记忆</p>
+      </div>
+    </div>
+    <div class="status" id="status">连接中…</div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="review">今日复习</button>
+    <button class="tab" data-tab="search">相似题检索</button>
+    <button class="tab" data-tab="library">题库</button>
+    <button class="tab" data-tab="add">录入错题</button>
+  </nav>
+
+  <main>
+    <section class="panel active" id="panel-review">
+      <div class="row">
+        <label>复习时长
+          <select id="budget">
+            <option value="10">10 分钟</option>
+            <option value="20" selected>20 分钟</option>
+            <option value="40">40 分钟</option>
+          </select>
+        </label>
+        <label>科目
+          <select id="subjectFilter"><option value="">全部</option></select>
+        </label>
+        <button class="primary" id="planBtn">生成今日复习清单</button>
+      </div>
+      <div id="reminders" class="reminders"></div>
+      <div id="planList" class="cards"></div>
+    </section>
+
+    <section class="panel" id="panel-search">
+      <div class="row">
+        <input id="searchInput" placeholder="输入题目关键词或完整题意，例如：洛必达法则求极限" />
+        <button class="primary" id="searchBtn">检索</button>
+      </div>
+      <p class="hint">检索走 seekdb：HNSW 向量近邻 + 关键词子句，结果按相似度排序。</p>
+      <div id="searchResults" class="cards"></div>
+    </section>
+
+    <section class="panel" id="panel-library">
+      <div class="row">
+        <input id="filterInput" placeholder="按标题 / 知识点过滤" />
+        <span class="count" id="itemCount"></span>
+      </div>
+      <div id="library" class="list"></div>
+    </section>
+
+    <section class="panel" id="panel-add">
+      <form id="addForm" class="form">
+        <label>标题<input name="title" required placeholder="例如：洛必达法则求极限" /></label>
+        <label>科目<input name="subject" placeholder="高等数学" /></label>
+        <label>知识点<input name="knowledge" placeholder="洛必达法则" /></label>
+        <label>题目<textarea name="prompt" required rows="3" placeholder="题干"></textarea></label>
+        <label>答案 / 解析<textarea name="answer" rows="3" placeholder="正确解法"></textarea></label>
+        <label>来源<input name="source" placeholder="错题本 2025-10" /></label>
+        <button class="primary" type="submit">保存并建立索引</button>
+      </form>
+    </section>
+
+    <aside class="memory">
+      <h2>PowerContext 薄弱点</h2>
+      <div class="row">
+        <input id="memoryQuery" placeholder="查询薄弱点，例如 洛必达" />
+        <button id="memoryBtn">查询</button>
+      </div>
+      <div id="memoryList" class="list small"></div>
+    </aside>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
