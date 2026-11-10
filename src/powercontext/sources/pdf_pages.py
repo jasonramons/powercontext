@@ -195,8 +195,8 @@ _SYNONYMS: dict[str, tuple[str, ...]] = {
     "capex": ("capital", "expenditures", "purchases", "property", "plant", "equipment"),
     "concentration": ("customer", "customers"),
     "costs": ("cost", "charges", "expenses"),
-    "customer": ("customers", "card members"),
-    "customers": ("customer", "card members"),
+    "customer": ("customers", "client", "clients", "airlines", "government", "contracts", "card members"),
+    "customers": ("customer", "clients", "airlines", "government", "contracts", "card members"),
     "cyclicality": ("cyclical", "economic conditions"),
     "depreciation": ("amortization",),
     "ebitda": ("operating", "income", "profit", "depreciation", "amortization"),
@@ -218,25 +218,6 @@ _SYNONYMS: dict[str, tuple[str, ...]] = {
     "segments": ("segment", "business segment"),
     "unadjusted": ("reported", "gaap"),
 }
-_STATEMENT_HINTS = (
-    (
-        (
-            "consolidated statement of income",
-            "consolidated statements of income",
-            "consolidated statement of operations",
-            "consolidated statements of operations",
-            "statement of earnings",
-        ),
-        "income_statement",
-    ),
-    (("consolidated balance sheet", "consolidated balance sheets", "balance sheet"), "balance_sheet"),
-    (
-        ("consolidated statement of cash flows", "consolidated statements of cash flows", "statement of cash flows"),
-        "cash_flow",
-    ),
-    (("summary of business segment data", "business segment data"), "segment"),
-    (("statement of stockholders", "statement of equity"), "equity"),
-)
 # Question phrases that identify the section of a 10-K most likely to contain
 # the evidence.  Each tuple is (question hints, section -> score multiplier).
 _QUESTION_INTENTS: tuple[tuple[tuple[str, ...], dict[str, float]], ...] = (
@@ -292,10 +273,19 @@ _QUESTION_INTENTS: tuple[tuple[tuple[str, ...], dict[str, float]], ...] = (
     (("legal", "litigation", "battles"), {"legal": 2.6}),
 )
 
-_SEARCH_VARIANT_WEIGHTS = (3.0, 2.0)
 _MAX_SEARCH_TERMS = 14
 _RRF_CONSTANT = 60.0
 _MIN_PAGE_TEXT_LENGTH = 24
+_SECTION_SEARCH_PHRASES: dict[str, tuple[str, ...]] = {
+    "balance_sheet": ("balance sheet", "current assets", "current liabilities"),
+    "income_statement": ("statement of income", "statements of operations", "net sales", "operating income"),
+    "cash_flow": ("statement of cash flows", "cash flows from operating activities"),
+    "segment": ("business segment", "segment data", "segment revenues"),
+    "business": ("item 1 business", "products and services", "customers"),
+    "acquisitions": ("acquisitions", "business combination"),
+    "risk": ("risk factors",),
+    "legal": ("legal proceedings", "litigation"),
+}
 _PAGE_INDEX_CACHE: weakref.WeakKeyDictionary[object, tuple[tuple[MemoryCitation, str, int], ...]] = (
     weakref.WeakKeyDictionary()
 )
@@ -308,6 +298,12 @@ class PDFDocumentInput(BaseModel):
 
     document_id: str
     content: bytes
+
+    @field_validator("document_id")
+    @classmethod
+    def validate_document_id(cls, value: str) -> str:
+        _require_document_id(value)
+        return value
 
 
 class PDFPageInput(BaseModel):
@@ -369,7 +365,7 @@ def pdf_page_source_id(document_id: str, document_sha256: str, page_number: int)
     if not isinstance(page_number, int) or isinstance(page_number, bool) or page_number < 1:
         raise ValueError("page_number must be a positive integer")  # noqa: TRY003
     identity = f"{document_id}\x00{document_sha256}\x00{page_number}".encode("utf-8")
-    source_id = f"{_SOURCE_ID_PREFIX}-page:{hashlib.sha256(identity).hexdigest()}"
+    source_id = f"{_SOURCE_ID_PREFIX}-page:{hashlib.sha256(identity).hexdigest()}:{page_number}"
     if len(source_id) > MAX_SOURCE_ID_LENGTH:
         raise ValueError(f"pdf page source id must not exceed {MAX_SOURCE_ID_LENGTH} characters")  # noqa: TRY003
     return source_id
@@ -490,6 +486,29 @@ def _tokens(text: str) -> list[str]:
     return _TOKEN.findall(text.casefold())
 
 
+def _stem(term: str) -> str:
+    """Conservatively normalize English plurals for lexical matching."""
+
+    if len(term) <= 3:
+        return term
+    if term.endswith("ies") and len(term) > 4:
+        return f"{term[:-3]}y"
+    if term.endswith("sses"):
+        return term[:-2]
+    if term.endswith("s") and not term.endswith("ss"):
+        return term[:-1]
+    return term
+
+
+def _indexed_tokens(text: str) -> list[str]:
+    return [_stem(token) for token in _tokens(text)]
+
+
+_SYNONYMS_BY_STEM: dict[str, tuple[str, ...]] = {}
+for _key, _values in _SYNONYMS.items():
+    _SYNONYMS_BY_STEM[_stem(_key)] = _SYNONYMS_BY_STEM.get(_stem(_key), ()) + _values
+
+
 def _normalize_term(term: str) -> str:
     match = _FY_TERM.fullmatch(term)
     if match is None:
@@ -507,7 +526,7 @@ def _content_terms(question: str) -> list[str]:
     terms: list[str] = []
     seen: set[str] = set()
     for raw in _TOKEN.findall(question.casefold()):
-        term = _normalize_term(raw)
+        term = _stem(_normalize_term(raw))
         if term in seen or term in _QUERY_STOPWORDS or (len(term) == 1 and not term.isdigit()):
             continue
         seen.add(term)
@@ -541,8 +560,22 @@ def _page_body(text: str) -> str:
 
 
 def _page_sections(page: str) -> set[str]:
-    head = " ".join(page[:900].casefold().split())
-    sections = {name for hints, name in _STATEMENT_HINTS if any(hint in head for hint in hints)}
+    head = " ".join(page[:300].casefold().split())
+    sections: set[str] = set()
+    statement_hits = 0
+    if re.search(r"(?im)^\s*consolidated\s+statements?\s+of\s+(income|operations|earnings)\b", page[:1200]):
+        sections.add("income_statement")
+        statement_hits += 1
+    if re.search(r"(?im)^\s*consolidated\s+balance\s+sheets?\b", page[:1200]):
+        sections.add("balance_sheet")
+        statement_hits += 1
+    if re.search(r"(?im)^\s*consolidated\s+statements?\s+of\s+cash\s+flows?\b", page[:1200]):
+        sections.add("cash_flow")
+        statement_hits += 1
+    if statement_hits > 1:
+        # A page naming several primary statements is an index or exhibit list,
+        # not one of the statements themselves.
+        sections.difference_update({"income_statement", "balance_sheet", "cash_flow"})
     if "business segment" in head or "segment data" in head:
         sections.add("segment")
     if "management" in head and "discussion" in head:
@@ -578,28 +611,79 @@ class _Page:
     counts: Counter[str]
     length: int
     sections: frozenset[str]
+    document_label: str
+    page_number: int | None
+
+
+def _document_label(text: str) -> str:
+    """Return a compact label from the leading document-id line."""
+
+    document_id = text.partition("\n")[0]
+    prefix = document_id.partition("_")[0]
+    return re.sub(r"[^a-z0-9]", "", prefix.casefold())
+
+
+def _page_number(source_id: str) -> int | None:
+    _, separator, tail = source_id.rpartition(":")
+    if not separator or not tail.isdigit():
+        return None
+    value = int(tail)
+    return value if value >= 1 else None
+
+
+def _mentions_document(question: str, label: str) -> bool:
+    if not label:
+        return False
+    text = question.casefold()
+    if re.search(rf"(?<![a-z0-9]){re.escape(label)}(?![a-z0-9])", text):
+        return True
+    if len(label) < 5:
+        return False
+    return label in re.sub(r"[^a-z0-9]", "", text)
+
+
+def _page(citation: MemoryCitation, body: str, text: str, page_number: int | None = None) -> _Page:
+    tokens = _indexed_tokens(body)
+    return _Page(
+        citation=citation,
+        body=body,
+        tokens=tuple(tokens),
+        counts=Counter(tokens),
+        length=len(tokens),
+        sections=frozenset(_page_sections(body)),
+        document_label=_document_label(text),
+        page_number=page_number,
+    )
 
 
 def _build_pages(entries: Iterable[Any]) -> tuple[_Page, ...]:
-    pages: list[_Page] = []
+    """Group entries by their exact Source so one page yields one citation.
+
+    A fixed pipeline normally writes one entry per page.  Grouping by Source id
+    keeps the result correct if a pipeline splits a long page across several
+    entries or a retry leaves more than one entry for the same page.
+    """
+
+    groups: dict[str, list[Any]] = {}
     for entry in entries:
         sources = getattr(entry.entry, "sources", ())
         if sources and not all(getattr(source, "source_type", "") == PDF_PAGE_SOURCE_NAME for source in sources):
             continue
-        body = _page_body(entry.entry.text)
+        key = (
+            str(getattr(sources[0], "source_id", ""))
+            if len(sources) == 1
+            else f"entry:{entry.citation.entry_id}"
+        )
+        groups.setdefault(key, []).append(entry)
+    pages: list[_Page] = []
+    for group in groups.values():
+        body = "\n".join(_page_body(entry.entry.text) for entry in group)
         if len(body.strip()) < _MIN_PAGE_TEXT_LENGTH:
             continue
-        tokens = _tokens(body)
-        pages.append(
-            _Page(
-                citation=entry.citation,
-                body=body,
-                tokens=tuple(tokens),
-                counts=Counter(tokens),
-                length=len(tokens),
-                sections=frozenset(_page_sections(body)),
-            )
-        )
+        citation = max(group, key=lambda entry: len(_page_body(entry.entry.text))).citation
+        sources = group[0].entry.sources
+        source_id = str(sources[0].source_id) if len(sources) == 1 else ""
+        pages.append(_page(citation, body, group[0].entry.text, _page_number(source_id)))
     return tuple(pages)
 
 
@@ -607,8 +691,8 @@ def _score_pages(pages: Sequence[_Page], question: str) -> list[float]:
     terms = _content_terms(question)
     expanded: dict[str, float] = {term: 1.0 for term in terms}
     for term in terms:
-        for synonym in _SYNONYMS.get(term, ()):
-            for token in _tokens(synonym):
+        for synonym in _SYNONYMS_BY_STEM.get(term, ()):
+            for token in _indexed_tokens(synonym):
                 expanded[token] = max(expanded.get(token, 0.0), 0.5)
     total = len(pages)
     average = sum(page.length for page in pages) / total or 1.0
@@ -640,6 +724,9 @@ def _score_pages(pages: Sequence[_Page], question: str) -> list[float]:
         )
     )
     wanted = _question_intents(question)
+    labels = {page.document_label for page in pages}
+    mentioned_labels = {label for label in labels if _mentions_document(question, label)}
+    customer_focus = any(term in terms for term in ("customer", "client", "airline", "government"))
     scores: list[float] = []
     for page in pages:
         score = 0.0
@@ -654,15 +741,42 @@ def _score_pages(pages: Sequence[_Page], question: str) -> list[float]:
         if numeric and page.length > 10:
             digits = sum(1 for token in page.tokens if token.isdigit())
             score += 0.8 * min(1.0, (digits / page.length) / 0.3)
+        if customer_focus:
+            token_set = page.counts.keys()
+            if any(term in token_set for term in ("airline", "government", "contract")) and any(
+                term in token_set for term in ("revenue", "sale")
+            ):
+                score += 2.0
         for section, weight in wanted.items():
             if section in page.sections:
                 score += 3.0 * weight
+        if page.document_label in mentioned_labels:
+            score += 10.0
         scores.append(score)
     return scores
 
 
 def _rank_pages(pages: Sequence[_Page], question: str, limit: int) -> tuple[MemoryCitation, ...]:
-    scores = _score_pages(pages, question)
+    scores = list(_score_pages(pages, question))
+    positions: dict[str, dict[int, int]] = {}
+    for index, page in enumerate(pages):
+        if page.page_number is not None:
+            key = page.document_label or page.citation.memory_ref.artifact_id
+            positions.setdefault(key, {})[page.page_number] = index
+    for index, page in enumerate(pages):
+        if page.page_number is None:
+            continue
+        key = page.document_label or page.citation.memory_ref.artifact_id
+        neighbours = [
+            positions[key][neighbour]
+            for neighbour in (page.page_number - 1, page.page_number + 1)
+            if neighbour in positions.get(key, {})
+        ]
+        if neighbours:
+            # Evidence frequently continues from an adjacent page.  Add a
+            # bounded context bonus from the stronger neighbour so a page whose
+            # first sentence lives on the previous page is still retrievable.
+            scores[index] += 0.32 * max(scores[neighbour] for neighbour in neighbours)
     ordered = sorted(zip(scores, pages), key=lambda item: (-item[0], item[1].citation.entry_id))
     return tuple(page.citation for _score, page in ordered[:limit])
 
@@ -699,6 +813,39 @@ async def _page_index(memory: object) -> tuple[_Page, ...] | None:
     return pages
 
 
+def _search_variants(question: str, terms: Sequence[str]) -> tuple[tuple[str, float], ...]:
+    """Build lexical search variants, including generic financial synonyms."""
+
+    variants: list[tuple[str, float]] = []
+    seen: set[str] = set()
+
+    def add(query: str, weight: float) -> None:
+        normalized = " ".join(query.split())
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            variants.append((normalized, weight))
+
+    add(question, 3.0)
+    add(" ".join(terms[:_MAX_SEARCH_TERMS]), 2.0)
+    for term in terms[:_MAX_SEARCH_TERMS]:
+        add(term, 1.0)
+        for synonym in _SYNONYMS_BY_STEM.get(term, ()):
+            for token in _indexed_tokens(synonym):
+                add(token, 0.5)
+    lowered = question.casefold()
+    for hints, weights in _QUESTION_INTENTS:
+        if not any(hint in lowered for hint in hints):
+            continue
+        for section in weights:
+            for phrase in _SECTION_SEARCH_PHRASES.get(section, ()):
+                add(phrase, 0.75)
+    return tuple(variants)
+
+
+def _candidate_key(page: _Page) -> str:
+    return f"{page.citation.memory_ref.artifact_id}\x00{page.citation.entry_id}"
+
+
 async def _search_candidates(
     memory: ScopedMemoryApplication,
     question: str,
@@ -707,44 +854,45 @@ async def _search_candidates(
 ) -> tuple[MemoryCitation, ...]:
     """Fallback retrieval through the public Memory search API."""
 
+    from powercontext.builtin.artifacts.memory.models import MemoryCitation
     from powercontext.builtin.runtime import SearchMemoryRequest
 
-    variants: list[str] = []
-    normalized = " ".join(question.split())
-    if normalized:
-        variants.append(normalized)
-    keyword_query = " ".join(terms[:_MAX_SEARCH_TERMS])
-    if keyword_query and keyword_query not in variants:
-        variants.append(keyword_query)
-    candidate_limit = max(64, min(240, limit * 10))
-    candidates: dict[str, tuple[MemoryCitation, float]] = {}
-    for variant_index, query in enumerate(variants + list(terms[:_MAX_SEARCH_TERMS])):
-        weight = _SEARCH_VARIANT_WEIGHTS[0] if variant_index == 0 else (
-            _SEARCH_VARIANT_WEIGHTS[1] if variant_index == 1 else 1.0
-        )
+    candidate_limit = max(80, min(240, limit * 12))
+    candidates: dict[str, _Page] = {}
+    bonuses: dict[str, float] = {}
+    for query, weight in _search_variants(question, terms):
         page = await memory.search(SearchMemoryRequest(query=query, mode="fts", limit=candidate_limit))
         for rank, hit in enumerate(page.hits, start=1):
             body = _page_body(hit.text)
             if len(body.strip()) < _MIN_PAGE_TEXT_LENGTH:
                 continue
             key = f"{hit.memory_ref.artifact_id}\x00{hit.entry_id}"
-            current = candidates.get(key)
-            addition = weight / (_RRF_CONSTANT + rank)
-            if current is None:
-                from powercontext.builtin.artifacts.memory.models import MemoryCitation
-
-                candidates[key] = (
+            candidate = candidates.get(key)
+            if candidate is None:
+                candidate = _page(
                     MemoryCitation(
                         memory_ref=hit.memory_ref,
                         entry_id=hit.entry_id,
                         entry_version_id=hit.entry_version_id,
                     ),
-                    addition,
+                    body,
+                    hit.text,
                 )
-            else:
-                candidates[key] = (current[0], current[1] + addition)
-    ordered = sorted(candidates.values(), key=lambda item: (-item[1], item[0].entry_id))
-    return tuple(citation for citation, _score in ordered[:limit])
+                candidates[key] = candidate
+            bonuses[key] = bonuses.get(key, 0.0) + weight / (_RRF_CONSTANT + rank)
+    if not candidates:
+        return ()
+    pages = tuple(candidates.values())
+    scores = _score_pages(pages, question)
+    maximum_bonus = max(bonuses.values()) or 1.0
+    ordered = sorted(
+        zip(scores, pages),
+        key=lambda item: (
+            -(item[0] + 0.5 * bonuses.get(_candidate_key(item[1]), 0.0) / maximum_bonus),
+            item[1].citation.entry_id,
+        ),
+    )
+    return tuple(page.citation for _score, page in ordered[:limit])
 
 
 async def search_pdf_pages(
