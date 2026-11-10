@@ -1,0 +1,7 @@
+# PowerContext 边车（bridge/app.py）依赖
+# builtin extra 提供内置 runtime（open_builtin_runtime）与 SQLite 持久化；
+# 只装 powercontext 或 powercontext[cli,server] 会缺 powercontext.builtin.*，启动即失败。
+powercontext[builtin]==1.2.0
+
+# PowerContext 全文检索（FTS）中文分词
+jieba==0.42.1

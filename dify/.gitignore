@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+
+# 运行时数据（首次启动自动生成，不随仓库提交）
+data/seekdb.db/
+data/state.json
+data/memory.json
+data/powercontext.db
+data/powercontext.db-shm
+data/powercontext.db-wal

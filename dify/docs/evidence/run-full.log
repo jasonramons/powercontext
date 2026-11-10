@@ -1,0 +1,5 @@
+[memory-inn] 启动记忆边车：C:\Users\PC\Documents\deepseek-harness\default-workspace\.pcvenv12\Scripts\python.exe  bridge/app.py
+[bridge] [bridge] ready scope=scp_20695af9rxn634w42g4m44tx91
+[bridge] [bridge] http://127.0.0.1:8767
+[memory-inn] 记忆边车就绪
+[memory-inn] http://127.0.0.1:8789  seekdb 127.0.0.1:52714  lore=29

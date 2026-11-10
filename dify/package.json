@@ -1,0 +1,23 @@
+{
+  "name": "memory-inn",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "记忆旅馆：Dify 负责叙事编排，seekdb 负责世界档案的向量检索，PowerContext 负责玩家记忆的持久化与召回",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node scripts/start.mjs",
+    "server": "node server/index.mjs",
+    "bridge": "node scripts/start-bridge.mjs",
+    "verify": "node scripts/verify.mjs",
+    "verify:strict": "node scripts/verify.mjs --strict",
+    "usage": "node scripts/record-usage.mjs"
+  },
+  "dependencies": {
+    "@oceanbase/seekdb-node": "1.4.0",
+    "express": "4.22.3",
+    "seekdb": "1.4.0"
+  }
+}

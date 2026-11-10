@@ -1,0 +1,244 @@
+{
+  "generatedAt": "2026-11-10T12:37:57.645Z",
+  "base": "http://127.0.0.1:8789",
+  "note": "Dify 的三个 HTTP 节点逐字段调用同一批接口，下面的请求体与 DSL 中节点的 body 完全一致。",
+  "health": {
+    "request": null,
+    "status": 200,
+    "response": {
+      "ok": true,
+      "lore": 29,
+      "seekdb": {
+        "mode": "seekdb",
+        "error": null
+      },
+      "powercontext": {
+        "ok": true,
+        "backend": "powercontext",
+        "base": "http://127.0.0.1:8767",
+        "bridge": {
+          "ok": true,
+          "checkedAt": 1794314277672,
+          "error": null,
+          "scope": "scp_0mmwfs8ybrws1d6s3ab5r9ett7"
+        },
+        "local_file": "C:\\Users\\PC\\Documents\\deepseek-harness\\default-workspace\\memory-inn\\data\\memory.json",
+        "local_entries": 0
+      }
+    }
+  },
+  "calls": [
+    {
+      "node": "http_scene",
+      "path": "/inn/scene",
+      "payload": {
+        "player": "evaluator",
+        "intent": "镜 倒影 替身"
+      },
+      "why": "第一次换场：意图决定从 seekdb 里取哪一间房",
+      "request": {
+        "player": "evaluator",
+        "intent": "镜 倒影 替身"
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "turn": 0,
+        "room": {
+          "id": "room_05",
+          "name": "镜面餐厅",
+          "text": "长桌两侧都是镜子，你的倒影比你晚半秒动。"
+        },
+        "guest": {
+          "id": "guest_04",
+          "name": "倒着走的人",
+          "line": "他退着走进房间，说这样才看得见过去。"
+        },
+        "rumor": {
+          "id": "rumor_04",
+          "text": "镜面餐厅的倒影会替你先尝一口汤。"
+        },
+        "prop": {
+          "id": "prop_05",
+          "name": "倒长的花"
+        },
+        "memories": [],
+        "visited": 1
+      }
+    },
+    {
+      "node": "http_scene",
+      "path": "/inn/scene",
+      "payload": {
+        "player": "evaluator",
+        "intent": "雨 露台 等待"
+      },
+      "why": "同一服务、不同意图：命中的房间随之改变，说明房间来自向量检索而不是写死分支",
+      "request": {
+        "player": "evaluator",
+        "intent": "雨 露台 等待"
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "turn": 0,
+        "room": {
+          "id": "room_07",
+          "name": "雨夜露台",
+          "text": "雨落在露台的铁栏杆上，有人在这里抽完了半包烟。"
+        },
+        "guest": {
+          "id": "guest_07",
+          "name": "雨中的旅人",
+          "line": "他从不在雨天进门，只在雨里讲完故事就走。"
+        },
+        "rumor": {
+          "id": "rumor_07",
+          "text": "露台的雨只在有人等候时下。"
+        },
+        "prop": {
+          "id": "prop_05",
+          "name": "倒长的花"
+        },
+        "memories": [],
+        "visited": 2
+      }
+    },
+    {
+      "node": "http_act",
+      "path": "/inn/act",
+      "payload": {
+        "player": "evaluator",
+        "action": "我问老板：你还记得我吗？"
+      },
+      "why": "玩家行动：触发 seekdb 线索检索并写入一条 PowerContext 记忆",
+      "request": {
+        "player": "evaluator",
+        "action": "我问老板：你还记得我吗？"
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "turn": 1,
+        "accepted": true,
+        "memory_written": true,
+        "memory_backend": "powercontext",
+        "clues": [
+          {
+            "kind": "guests",
+            "name": "记账的老妇人",
+            "detail": "她的账本记着每位客人欠旅馆的东西，包括记忆。 账本 债务 记忆",
+            "distance": "0.5102"
+          },
+          {
+            "kind": "guests",
+            "name": "灯塔看守人",
+            "detail": "他随身带着一本潮汐日志，写满了别人的名字。 失眠 海 记录",
+            "distance": "0.7583"
+          }
+        ]
+      }
+    },
+    {
+      "node": "http_act",
+      "path": "/inn/act",
+      "payload": {
+        "player": "evaluator",
+        "action": "我去第七号信箱投一封信"
+      },
+      "why": "第二个行动：线索集合变化，记忆继续累积",
+      "request": {
+        "player": "evaluator",
+        "action": "我去第七号信箱投一封信"
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "turn": 2,
+        "accepted": true,
+        "memory_written": true,
+        "memory_backend": "powercontext",
+        "clues": [
+          {
+            "kind": "rumors",
+            "name": "有人说，只要在第七号信箱",
+            "detail": "",
+            "distance": "0.5081"
+          },
+          {
+            "kind": "rooms",
+            "name": "第七号信箱",
+            "detail": "一排信箱里只有第七个是热的，里面塞着一张没写收件人的纸。 信件 秘密 投递",
+            "distance": "0.5233"
+          }
+        ]
+      }
+    },
+    {
+      "node": "http_scene",
+      "path": "/inn/scene",
+      "payload": {
+        "player": "evaluator",
+        "intent": "记忆 账本 欠"
+      },
+      "why": "第三回合换场：memories 字段应带回前面写入的历史",
+      "request": {
+        "player": "evaluator",
+        "intent": "记忆 账本 欠"
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "turn": 2,
+        "room": {
+          "id": "room_02",
+          "name": "无声走廊",
+          "text": "走廊的地毯吸走一切声音，你踩上去，只听见自己的心跳。"
+        },
+        "guest": {
+          "id": "guest_08",
+          "name": "记账的老妇人",
+          "line": "她的账本记着每位客人欠旅馆的东西，包括记忆。"
+        },
+        "rumor": {
+          "id": "rumor_03",
+          "text": "温室的花只在没人看的时候生长。"
+        },
+        "prop": {
+          "id": "prop_03",
+          "name": "盐渍信封"
+        },
+        "memories": [
+          "玩家「evaluator」第 1 回合：我问老板：你还记得我吗？",
+          "玩家「evaluator」第 2 回合：我去第七号信箱投一封信"
+        ],
+        "visited": 3
+      }
+    },
+    {
+      "node": "custom",
+      "path": "/inn/recall",
+      "payload": {
+        "player": "evaluator",
+        "query": "老板",
+        "limit": 5
+      },
+      "why": "独立回忆接口：只查 PowerContext，不推进剧情",
+      "request": {
+        "player": "evaluator",
+        "query": "老板",
+        "limit": 5
+      },
+      "status": 200,
+      "response": {
+        "ok": true,
+        "hits": [
+          {
+            "text": "玩家「evaluator」第 1 回合：我问老板：你还记得我吗？",
+            "score": 0.01639344262295082
+          }
+        ]
+      }
+    }
+  ]
+}

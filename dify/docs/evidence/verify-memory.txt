@@ -1,0 +1,92 @@
+ok   服务健康  (lore=29 seekdb=memory)
+ok   记忆后端可用  (backend=local)
+ok   第 1 回合生成场景  (room=无声走廊 guest=雨中的旅人)
+ok   场景由向量检索得出  (room_02)
+ok   行动被接受  (turn=1)
+ok   行动触发线索检索  (clues=2)
+ok   行动写入记忆  (backend=local)
+ok   下一回合带回记忆  ("玩家「tester」第 1 回合：我问老板：你还记得我吗？")
+ok   回忆接口命中  ({"text":"玩家「tester」第 1 回合：我问老板：你还记得我吗？","score":1})
+ok   多回合推进  (turn=3)
+ok   不同行动命中不同线索  (有人说，只要在第七号信箱 vs 镜面餐厅)
+
+{
+  "base": "http://127.0.0.1:8789",
+  "autoStarted": false,
+  "elapsedMs": 38,
+  "seekdb": "memory",
+  "memory_backend": "local",
+  "passed": 11,
+  "skipped": 0,
+  "total": 11,
+  "checks": [
+    {
+      "name": "服务健康",
+      "ok": true,
+      "skipped": false,
+      "detail": "lore=29 seekdb=memory"
+    },
+    {
+      "name": "记忆后端可用",
+      "ok": true,
+      "skipped": false,
+      "detail": "backend=local"
+    },
+    {
+      "name": "第 1 回合生成场景",
+      "ok": true,
+      "skipped": false,
+      "detail": "room=无声走廊 guest=雨中的旅人"
+    },
+    {
+      "name": "场景由向量检索得出",
+      "ok": true,
+      "skipped": false,
+      "detail": "room_02"
+    },
+    {
+      "name": "行动被接受",
+      "ok": true,
+      "skipped": false,
+      "detail": "turn=1"
+    },
+    {
+      "name": "行动触发线索检索",
+      "ok": true,
+      "skipped": false,
+      "detail": "clues=2"
+    },
+    {
+      "name": "行动写入记忆",
+      "ok": true,
+      "skipped": false,
+      "detail": "backend=local"
+    },
+    {
+      "name": "下一回合带回记忆",
+      "ok": true,
+      "skipped": false,
+      "detail": "\"玩家「tester」第 1 回合：我问老板：你还记得我吗？\""
+    },
+    {
+      "name": "回忆接口命中",
+      "ok": true,
+      "skipped": false,
+      "detail": "{\"text\":\"玩家「tester」第 1 回合：我问老板：你还记得我吗？\",\"score\":1}"
+    },
+    {
+      "name": "多回合推进",
+      "ok": true,
+      "skipped": false,
+      "detail": "turn=3"
+    },
+    {
+      "name": "不同行动命中不同线索",
+      "ok": true,
+      "skipped": false,
+      "detail": "有人说，只要在第七号信箱 vs 镜面餐厅"
+    }
+  ]
+}
+
+pass: 11/11
