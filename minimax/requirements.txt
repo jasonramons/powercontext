@@ -1,0 +1,10 @@
+# 运行依赖（Linux x86_64 / macOS，Python 3.12）
+#
+# - powercontext[builtin]：任务状态（scoped Memory + SQLite 持久化）
+# - pylibseekdb：嵌入式 seekdb（工程资料库，无需部署数据库服务）
+# - pymysql：通过 MySQL 协议访问嵌入式 seekdb
+# - pytest：目标测试 / 回归测试
+powercontext[builtin]==1.2.0
+pylibseekdb==1.4.0.post1; sys_platform == "linux" or sys_platform == "darwin"
+pymysql>=1.1,<2
+pytest>=8,<10

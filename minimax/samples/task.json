@@ -1,0 +1,56 @@
+{
+  "task_id": "TASK-PAGINATION-001",
+  "title": "修复 orderkit 订单列表分页的边界缺陷",
+  "task": "修复 orderkit 的分页工具 pagination.py：paginate 的 page 改为从 1 开始；page_size 只接受 1..100，非法值抛 ValueError；page 超出末页时返回空列表；page_count 在整除时不得多算一页；page_count 的 total 为负数时抛 ValueError。保持函数名、参数顺序、返回类型不变，不修改入参。",
+  "business_project": "business/",
+  "required_sources": [
+    {
+      "kind": "spec",
+      "symbol": "SPEC-PAGE-001",
+      "why": "页码从 1 开始的语义"
+    },
+    {
+      "kind": "spec",
+      "symbol": "SPEC-PAGE-002",
+      "why": "page_size 的取值范围与失败方式"
+    },
+    {
+      "kind": "spec",
+      "symbol": "SPEC-PAGE-003",
+      "why": "超出末页时返回空列表"
+    },
+    {
+      "kind": "spec",
+      "symbol": "SPEC-PAGE-004",
+      "why": "page_count 的整除语义"
+    },
+    {
+      "kind": "code",
+      "path": "business/app/orderkit/pagination.py",
+      "symbol": "paginate",
+      "why": "需要修改的实现"
+    },
+    {
+      "kind": "code",
+      "path": "business/app/orderkit/pagination.py",
+      "symbol": "page_count",
+      "why": "需要修改的实现"
+    },
+    {
+      "kind": "test",
+      "path": "business/tests/test_pagination_target.py",
+      "symbol": "test_first_page_is_one_based",
+      "why": "目标功能测试"
+    },
+    {
+      "kind": "test",
+      "path": "business/tests/test_pagination_regression.py",
+      "symbol": "test_returns_a_list_copy_and_does_not_mutate_input",
+      "why": "必须保持的既有行为"
+    }
+  ],
+  "expected_after": {
+    "target_tests": "business/tests/test_pagination_target.py 全部通过",
+    "regression_tests": "business/tests/test_pagination_regression.py 全部通过"
+  }
+}

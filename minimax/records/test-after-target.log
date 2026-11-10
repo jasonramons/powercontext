@@ -1,0 +1,5 @@
+$ python -m pytest business/tests/test_pagination_target.py
+# exit_code=0 passed=18 failed=0 errors=0
+
+..................                                                       [100%]
+18 passed in 0.01s

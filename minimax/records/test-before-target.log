@@ -1,0 +1,192 @@
+$ python -m pytest business/tests/test_pagination_target.py
+# exit_code=1 passed=2 failed=16 errors=0
+
+FFF.FFFFFFFFF.FFFF                                                       [100%]
+=================================== FAILURES ===================================
+_________________________ test_first_page_is_one_based _________________________
+
+    def test_first_page_is_one_based():
+        page = paginate(_orders(25), 1, 10)
+>       assert [row["order_id"] for row in page] == [f"SO{i:04d}" for i in range(10)]
+E       AssertionError: assert ['SO0010', 'S...'SO0015', ...] == ['SO0000', 'S...'SO0005', ...]
+E         
+E         At index 0 diff: 'SO0010' != 'SO0000'
+E         Use -v to get more diff
+
+business/tests/test_pagination_target.py:17: AssertionError
+___________________ test_second_page_starts_after_first_page ___________________
+
+    def test_second_page_starts_after_first_page():
+        page = paginate(_orders(25), 2, 10)
+>       assert [row["order_id"] for row in page] == [f"SO{i:04d}" for i in range(10, 20)]
+E       AssertionError: assert ['SO0020', 'S...23', 'SO0024'] == ['SO0010', 'S...'SO0015', ...]
+E         
+E         At index 0 diff: 'SO0020' != 'SO0010'
+E         Right contains 5 more items, first extra item: 'SO0015'
+E         Use -v to get more diff
+
+business/tests/test_pagination_target.py:22: AssertionError
+____________________________ test_last_partial_page ____________________________
+
+    def test_last_partial_page():
+        page = paginate(_orders(25), 3, 10)
+>       assert [row["order_id"] for row in page] == [f"SO{i:04d}" for i in range(20, 25)]
+E       AssertionError: assert [] == ['SO0020', 'S...23', 'SO0024']
+E         
+E         Right contains 5 more items, first extra item: 'SO0020'
+E         Use -v to get more diff
+
+business/tests/test_pagination_target.py:27: AssertionError
+______________________ test_page_below_one_is_rejected[0] ______________________
+
+page = 0
+
+    @pytest.mark.parametrize("page", [0, -1, -7])
+    def test_page_below_one_is_rejected(page):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:36: Failed
+_____________________ test_page_below_one_is_rejected[-1] ______________________
+
+page = -1
+
+    @pytest.mark.parametrize("page", [0, -1, -7])
+    def test_page_below_one_is_rejected(page):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:36: Failed
+_____________________ test_page_below_one_is_rejected[-7] ______________________
+
+page = -7
+
+    @pytest.mark.parametrize("page", [0, -1, -7])
+    def test_page_below_one_is_rejected(page):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:36: Failed
+__________________ test_page_size_out_of_range_is_rejected[0] __________________
+
+page_size = 0
+
+    @pytest.mark.parametrize("page_size", [0, -5, 101, 1000])
+    def test_page_size_out_of_range_is_rejected(page_size):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:42: Failed
+_________________ test_page_size_out_of_range_is_rejected[-5] __________________
+
+page_size = -5
+
+    @pytest.mark.parametrize("page_size", [0, -5, 101, 1000])
+    def test_page_size_out_of_range_is_rejected(page_size):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:42: Failed
+_________________ test_page_size_out_of_range_is_rejected[101] _________________
+
+page_size = 101
+
+    @pytest.mark.parametrize("page_size", [0, -5, 101, 1000])
+    def test_page_size_out_of_range_is_rejected(page_size):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:42: Failed
+________________ test_page_size_out_of_range_is_rejected[1000] _________________
+
+page_size = 1000
+
+    @pytest.mark.parametrize("page_size", [0, -5, 101, 1000])
+    def test_page_size_out_of_range_is_rejected(page_size):
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:42: Failed
+____________________ test_page_size_bounds_are_inclusive[1] ____________________
+
+page_size = 1
+
+    @pytest.mark.parametrize("page_size", [1, 100])
+    def test_page_size_bounds_are_inclusive(page_size):
+>       assert paginate(_orders(150), 1, page_size) == _orders(150)[:page_size]
+E       AssertionError: assert [{'order_id': 'SO0001'}] == [{'order_id': 'SO0000'}]
+E         
+E         At index 0 diff: {'order_id': 'SO0001'} != {'order_id': 'SO0000'}
+E         Use -v to get more diff
+
+business/tests/test_pagination_target.py:48: AssertionError
+___________________ test_page_size_bounds_are_inclusive[100] ___________________
+
+page_size = 100
+
+    @pytest.mark.parametrize("page_size", [1, 100])
+    def test_page_size_bounds_are_inclusive(page_size):
+>       assert paginate(_orders(150), 1, page_size) == _orders(150)[:page_size]
+E       AssertionError: assert [{'order_id':...SO0105'}, ...] == [{'order_id':...SO0005'}, ...]
+E         
+E         At index 0 diff: {'order_id': 'SO0100'} != {'order_id': 'SO0000'}
+E         Right contains 50 more items, first extra item: {'order_id': 'SO0050'}
+E         Use -v to get more diff
+
+business/tests/test_pagination_target.py:48: AssertionError
+_______________ test_page_count_exact_multiple_is_not_rounded_up _______________
+
+    def test_page_count_exact_multiple_is_not_rounded_up():
+>       assert page_count(20, 10) == 2
+E       assert 3 == 2
+E        +  where 3 = page_count(20, 10)
+
+business/tests/test_pagination_target.py:57: AssertionError
+_________________ test_page_count_of_empty_collection_is_zero __________________
+
+    def test_page_count_of_empty_collection_is_zero():
+>       assert page_count(0, 10) == 0
+E       assert 1 == 0
+E        +  where 1 = page_count(0, 10)
+
+business/tests/test_pagination_target.py:62: AssertionError
+__________________ test_page_count_rejects_negative_total[-1] __________________
+
+total = -1
+
+    @pytest.mark.parametrize("total", [-1, -30])
+    def test_page_count_rejects_negative_total(total):
+        # SPEC-PAGE-006：total 为负数属于调用方错误，必须显式失败。
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:68: Failed
+_________________ test_page_count_rejects_negative_total[-30] __________________
+
+total = -30
+
+    @pytest.mark.parametrize("total", [-1, -30])
+    def test_page_count_rejects_negative_total(total):
+        # SPEC-PAGE-006：total 为负数属于调用方错误，必须显式失败。
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE ValueError
+
+business/tests/test_pagination_target.py:68: Failed
+=========================== short test summary info ============================
+FAILED business/tests/test_pagination_target.py::test_first_page_is_one_based
+FAILED business/tests/test_pagination_target.py::test_second_page_starts_after_first_page
+FAILED business/tests/test_pagination_target.py::test_last_partial_page - Ass...
+FAILED business/tests/test_pagination_target.py::test_page_below_one_is_rejected[0]
+FAILED business/tests/test_pagination_target.py::test_page_below_one_is_rejected[-1]
+FAILED business/tests/test_pagination_target.py::test_page_below_one_is_rejected[-7]
+FAILED business/tests/test_pagination_target.py::test_page_size_out_of_range_is_rejected[0]
+FAILED business/tests/test_pagination_target.py::test_page_size_out_of_range_is_rejected[-5]
+FAILED business/tests/test_pagination_target.py::test_page_size_out_of_range_is_rejected[101]
+FAILED business/tests/test_pagination_target.py::test_page_size_out_of_range_is_rejected[1000]
+FAILED business/tests/test_pagination_target.py::test_page_size_bounds_are_inclusive[1]
+FAILED business/tests/test_pagination_target.py::test_page_size_bounds_are_inclusive[100]
+FAILED business/tests/test_pagination_target.py::test_page_count_exact_multiple_is_not_rounded_up
+FAILED business/tests/test_pagination_target.py::test_page_count_of_empty_collection_is_zero
+FAILED business/tests/test_pagination_target.py::test_page_count_rejects_negative_total[-1]
+FAILED business/tests/test_pagination_target.py::test_page_count_rejects_negative_total[-30]
+16 failed, 2 passed in 0.04s

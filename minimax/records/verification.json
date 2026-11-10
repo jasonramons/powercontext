@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "before": {
+    "exit_code": 1,
+    "passed": 2,
+    "failed": 16
+  },
+  "after_target": {
+    "exit_code": 0,
+    "passed": 18,
+    "failed": 0
+  },
+  "after_regression": {
+    "exit_code": 0,
+    "passed": 6,
+    "failed": 0
+  },
+  "generated_at": "2026-11-10T12:12:58+00:00"
+}

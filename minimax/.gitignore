@@ -1,0 +1,10 @@
+# 运行时数据（seekdb 实例、PowerContext SQLite）不提交
+data/
+# 本地密钥不提交
+minimax-key.txt
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
