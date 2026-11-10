@@ -30,6 +30,7 @@ from pydantic import BaseModel, JsonValue, ValidationError
 
 from powercontext._logging import log_safely
 from powercontext.artifacts import ArtifactRef
+from powercontext.builtin.runtime.context_pack import ContextPack, ContextPackDelta
 from powercontext.builtin.artifacts.experience import (
     EXPERIENCE_INCUBATION_WINDOW_LIMIT,
     Experience,
@@ -846,6 +847,21 @@ class ScopedContextApplication:
             if authorize_scopes is not None:
                 await authorize_scopes((self.scope_id, *scope.context_references))
             return await self._prepare(request, scope)
+
+    async def prepare_incremental(
+        self,
+        request: PrepareContextRequest,
+        /,
+        *,
+        base_pack: ContextPack | None = None,
+        chunk_bytes: int = 512,
+    ) -> ContextPack | ContextPackDelta:
+        """Prepare context and return a pack, or a delta against ``base_pack``."""
+        prepared = await self.prepare(request)
+        pack = ContextPack.from_content(prepared.content, chunk_bytes=chunk_bytes)
+        if base_pack is None:
+            return pack
+        return ContextPackDelta.between(base_pack, pack)
 
     async def _prepare(self, request: PrepareContextRequest, scope: ScopeDescriptor, /) -> PreparedContext:
         build, effort = await self._prepare_build(request, scope)

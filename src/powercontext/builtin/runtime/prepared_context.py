@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from itertools import chain
@@ -56,6 +57,8 @@ class _PreparedContextEntry:
     citation: dict[str, object]
     content: str
     truncated: bool
+    start: int | None = None
+    end: int | None = None
 
 
 @dataclass(frozen=True)
@@ -106,6 +109,7 @@ class PreparedContextBuild:
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
+    fragments: tuple[PreparedContextFragment, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -118,6 +122,16 @@ class MemoryEntryAddress:
 
 
 PreparedContextOrigin = MemoryCitation | ArtifactRef | MemoryEntryAddress | ArtifactAddress
+
+
+@dataclass(frozen=True)
+class PreparedContextFragment:
+    """One literal span of a Memory entry selected as evidence."""
+
+    address: MemoryEntryAddress
+    start: int
+    end: int
+    text: str
 
 
 @dataclass(frozen=True)
@@ -235,6 +249,10 @@ class PreparedContextBuilder:
         if sum(len(candidates.hits) for candidates in experience_candidates) > self.experience_candidate_limit:
             raise PreparedContextInvariantError("experience-candidate-limit")
 
+        if request.evidence_selection:
+            return self._build_evidence_selection(
+                request=request, current_scope_id=current_scope_id, memory_candidates=memory_candidates
+            )
         content, origins, omissions = self._select_entries(
             request=request,
             current_scope_id=current_scope_id,
@@ -254,6 +272,92 @@ class PreparedContextBuilder:
             context=PreparedContext(status="ready", content=content, content_bytes=content_bytes),
             origins=origins,
             omissions=omissions,
+        )
+
+    def _build_evidence_selection(
+        self,
+        *,
+        request: PrepareContextRequest,
+        current_scope_id: str | None,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> PreparedContextBuild:
+        """Select literal query-relevant spans of the candidate entries."""
+
+        terms = _query_terms(request.query)
+        entries: list[_PreparedContextEntry] = []
+        fragments: list[PreparedContextFragment] = []
+        origins: list[PreparedContextOrigin] = []
+        seen: set[tuple[str, str]] = set()
+
+        for group in memory_candidates:
+            if group.hits and group.memory_ref is None:
+                raise PreparedContextInvariantError("memory-ref-missing")
+            for hit in group.hits:
+                if hit.memory_ref != group.memory_ref:
+                    raise PreparedContextInvariantError("memory-ref-mismatch")
+                key = (hit.entry_id, hit.entry_version_id)
+                if key in seen or not hit.text.strip():
+                    continue
+                seen.add(key)
+                start, end = _best_span(hit.text, terms)
+                memory = ArtifactAddress(scope_id=group.scope_id, artifact=hit.memory_ref)
+                address = MemoryEntryAddress(
+                    memory=memory,
+                    entry_id=hit.entry_id,
+                    entry_version_id=hit.entry_version_id,
+                )
+                citation = {
+                    "scope_id": group.scope_id,
+                    "memory_ref": hit.memory_ref.model_dump(mode="json"),
+                    "entry_id": hit.entry_id,
+                    "entry_version_id": hit.entry_version_id,
+                }
+                entry = _PreparedContextEntry(
+                    origin=MemoryCitation(
+                        memory_ref=hit.memory_ref,
+                        entry_id=hit.entry_id,
+                        entry_version_id=hit.entry_version_id,
+                    ),
+                    kind="memory",
+                    citation=citation,
+                    content=hit.text[start:end],
+                    truncated=False,
+                    start=start,
+                    end=end,
+                )
+                # Shrink the span until it fits, then stop adding fragments.
+                while entry.content and _rendered_bytes((*entries, entry)) > request.max_bytes:
+                    end = start + max(0, len(entry.content) - 16)
+                    if end <= start:
+                        break
+                    entry = _PreparedContextEntry(
+                        origin=entry.origin,
+                        kind=entry.kind,
+                        citation=entry.citation,
+                        content=hit.text[start:end],
+                        truncated=False,
+                        start=start,
+                        end=end,
+                    )
+                if not entry.content or _rendered_bytes((*entries, entry)) > request.max_bytes:
+                    break
+                entries.append(entry)
+                fragments.append(
+                    PreparedContextFragment(
+                        address=address, start=start, end=end, text=entry.content
+                    )
+                )
+                origins.append(entry.origin)
+
+        if not entries:
+            return PreparedContextBuild(context=self.empty(), origins=(), fragments=())
+        content = _render(tuple(entries))
+        return PreparedContextBuild(
+            context=PreparedContext(
+                status="ready", content=content, content_bytes=len(content.encode("utf-8"))
+            ),
+            origins=tuple(origins),
+            fragments=tuple(fragments),
         )
 
     def probe_budget(
@@ -715,6 +819,9 @@ def _render_entry(entry: _PreparedContextEntry) -> dict[str, object]:
         "content": entry.content,
         "truncated": entry.truncated,
     }
+    if entry.start is not None and entry.end is not None:
+        rendered["start"] = entry.start
+        rendered["end"] = entry.end
     if entry.kind != "memory":
         rendered["kind"] = entry.kind
     return rendered
@@ -728,3 +835,49 @@ def _truncate_utf8(text: str, byte_budget: int) -> str:
     prefix_budget = byte_budget - len(_ELLIPSIS.encode("utf-8"))
     encoded_prefix = text.encode("utf-8")[:prefix_budget]
     return f"{encoded_prefix.decode('utf-8', errors='ignore')}{_ELLIPSIS}"
+
+
+def _query_terms(query: str) -> set[str]:
+    """Literal lookup terms: latin words and CJK bigrams."""
+
+    terms: set[str] = set()
+    lowered = query.lower()
+    for word in re.findall(r"[a-z0-9]+", lowered):
+        if len(word) >= 3:
+            terms.add(word)
+    for run in re.findall(r"[\u4e00-\u9fff]+", lowered):
+        if len(run) == 1:
+            terms.add(run)
+        for index in range(len(run) - 1):
+            terms.add(run[index : index + 2])
+    if not terms:
+        terms.add(lowered.strip())
+    return terms
+
+
+def _best_span(text: str, terms: set[str], limit: int = 400) -> tuple[int, int]:
+    """Return the sentence window that covers the most query terms."""
+
+    spans: list[tuple[int, int]] = []
+    start = 0
+    for match in re.finditer(r"(?<=[.!?。！？])[ \t\r\n]+|\n+", text):
+        if match.start() > start:
+            spans.append((start, match.start()))
+        start = match.end()
+    if start < len(text):
+        spans.append((start, len(text)))
+    if not spans:
+        spans = [(0, len(text))]
+
+    best = spans[0]
+    best_score = -1
+    for candidate in spans:
+        window = text[candidate[0] : candidate[1]].lower()
+        score = sum(1 for term in terms if term in window)
+        if score > best_score:
+            best_score = score
+            best = candidate
+    begin, finish = best
+    if finish - begin > limit:
+        finish = begin + limit
+    return begin, finish
