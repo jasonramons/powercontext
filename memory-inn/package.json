@@ -1,0 +1,17 @@
+{
+  "name": "memory-inn",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "记忆旅馆：Dify 驱动、seekdb 检索、PowerContext 记忆的文字冒险",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "bridge": "python bridge/app.py",
+    "verify": "node scripts/verify.mjs"
+  },
+  "dependencies": {
+    "@oceanbase/seekdb-node": "^1.4.0",
+    "express": "^4.21.2",
+    "seekdb": "^1.4.0"
+  }
+}

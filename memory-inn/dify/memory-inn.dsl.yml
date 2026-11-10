@@ -1,0 +1,276 @@
+app:
+  description: 记忆旅馆 —— 老板和住客会记得你上一次来过。Dify 负责叙事，seekdb 负责“这间房是什么”，PowerContext 负责“你来过几次、说过什么”。
+  icon: 🏨
+  icon_background: '#E0F2FE'
+  mode: chat
+  name: 记忆旅馆
+kind: app
+version: 0.1.5
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - description: 记忆旅馆世界服务地址
+    id: inn_base_url
+    name: INN_BASE_URL
+    selector: []
+    value: http://127.0.0.1:8789
+    value_type: string
+  features:
+    file_upload:
+      allowed_file_extensions: []
+      allowed_file_types: []
+      allowed_file_upload_methods: []
+      enabled: false
+      image:
+        enabled: false
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: '欢迎光临记忆旅馆。
+
+      这里的老板记得每一位客人——包括你上一次说过的谎。
+
+      输入你想做的事，比如「我问老板：你还记得我吗？」'
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 我问老板：你还记得我吗？
+    - 我去第七号信箱投一封信
+    - 我照了照镜子
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+    - data:
+        isInIteration: false
+        sourceType: start
+        targetType: http-request
+      id: edge-start-act
+      source: start
+      sourceHandle: source
+      target: http_act
+      targetHandle: target
+    - data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: http-request
+      id: edge-act-scene
+      source: http_act
+      sourceHandle: source
+      target: http_scene
+      targetHandle: target
+    - data:
+        isInIteration: false
+        sourceType: http-request
+        targetType: llm
+      id: edge-scene-llm
+      source: http_scene
+      sourceHandle: source
+      target: llm_narrate
+      targetHandle: target
+    - data:
+        isInIteration: false
+        sourceType: llm
+        targetType: answer
+      id: edge-llm-answer
+      source: llm_narrate
+      sourceHandle: source
+      target: answer
+      targetHandle: target
+    nodes:
+    - data:
+        desc: 玩家这一回合的输入
+        selected: false
+        title: 开始
+        type: start
+        variables:
+        - label: 玩家
+          max_length: 64
+          options: []
+          required: false
+          type: text-input
+          variable: player
+      height: 90
+      id: start
+      position:
+        x: 80
+        y: 300
+      positionAbsolute:
+        x: 80
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        authorization: &id001
+          config: null
+          type: no-auth
+        headers: 'Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config: &id002
+          max_retries: 2
+          retry_enabled: true
+          retry_interval: 500
+        selected: false
+        ssl_verify: false
+        timeout: &id003
+          max_connect_timeout: 0
+          max_read_timeout: 0
+          max_write_timeout: 0
+        desc: 判定这一回合：写入记忆、检索线索
+        title: 旅馆判定
+        type: http-request
+        url: '{{#env.INN_BASE_URL#}}/inn/act'
+        body:
+          data: '{"player":"{{#start.player#}}","action":"{{#sys.query#}}"}'
+          type: json
+        variables:
+        - value_selector:
+          - http_act
+          - body
+          variable: act_body
+      height: 120
+      id: http_act
+      position:
+        x: 380
+        y: 300
+      positionAbsolute:
+        x: 380
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        authorization: *id001
+        headers: 'Content-Type: application/json'
+        method: post
+        params: ''
+        retry_config: *id002
+        selected: false
+        ssl_verify: false
+        timeout: *id003
+        desc: 从 seekdb 取场景事实，并从 PowerContext 取回记忆
+        title: 场景与记忆
+        type: http-request
+        url: '{{#env.INN_BASE_URL#}}/inn/scene'
+        body:
+          data: '{"player":"{{#start.player#}}","intent":"{{#sys.query#}}"}'
+          type: json
+        variables:
+        - value_selector:
+          - http_scene
+          - body
+          variable: scene_body
+      height: 120
+      id: http_scene
+      position:
+        x: 680
+        y: 300
+      positionAbsolute:
+        x: 680
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 用世界事实 + 记忆写出这一回合
+        model:
+          completion_params:
+            max_tokens: 512
+            temperature: 0.9
+            top_p: 0.95
+          mode: chat
+          name: qwen-plus
+          provider: langgenius/tongyi/tongyi
+        prompt_template:
+        - role: system
+          text: '你是《记忆旅馆》的叙述者。这是一个文字冒险游戏：玩家住进一家会记住客人的旅馆。
+
+            你只能基于下面给出的"世界事实"和"玩家记忆"来叙述，不要凭空发明新的房间名、人物名或物品名。
+
+            写作要求：
+
+            1. 用第二人称"你"，200 字以内，现在时态，氛围是潮湿、安静、略带不安的奇幻。
+
+            2. 必须体现至少一条"玩家记忆"（如果非空），用"老板低声说"或"你忽然想起"的方式自然带出。
+
+            3. 结尾给玩家一个可以立刻行动的选择提示（一句话，不要列清单）。
+
+            4. 不要输出 JSON，不要复述字段名。'
+        - role: user
+          text: '玩家这一回合的行动：
+
+            {{#sys.query#}}
+
+
+            判定结果（是否接受、写入了什么记忆、命中的线索）：
+
+            {{#http_act.body#}}
+
+
+            本回合世界事实（房间、住客、传闻、物品）与玩家记忆：
+
+            {{#http_scene.body#}}'
+        selected: false
+        title: 叙述者
+        type: llm
+        variables: []
+        vision:
+          enabled: false
+      height: 98
+      id: llm_narrate
+      position:
+        x: 980
+        y: 300
+      positionAbsolute:
+        x: 980
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    - data:
+        answer: '{{#llm_narrate.text#}}'
+        desc: 输出这一回合
+        selected: false
+        title: 回答
+        type: answer
+        variables: []
+      height: 103
+      id: answer
+      position:
+        x: 1280
+        y: 300
+      positionAbsolute:
+        x: 1280
+        y: 300
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      type: custom
+      width: 244
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7
