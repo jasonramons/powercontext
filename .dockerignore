@@ -1,0 +1,7 @@
+node_modules
+data/items.json
+data/progress.json
+data/powercontext.json
+data/seekdb.db
+.git
+*.log

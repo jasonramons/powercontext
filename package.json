@@ -1,0 +1,17 @@
+{
+  "name": "study-buddy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Study Buddy — 错题/笔记复习助手：seekdb 混合检索 + PowerContext 薄弱点记忆，Qoder 开发",
+  "main": "server.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test/smoke.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "dependencies": {}
+}
