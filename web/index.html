@@ -426,7 +426,7 @@
             查看源码
           </a>
         </div>
-        <p class="hero-note">纯前端可交互演示：内置 8 道示例题，无需登录、不涉及后端服务。</p>
+        <p class="hero-note">纯前端可交互演示：内置 8 道示例题；录入的题目、掌握度与薄弱点记忆保存在本浏览器，刷新页面不丢失。</p>
       </div>
 
       <aside class="plan-card" aria-labelledby="planTitle">
@@ -506,6 +506,21 @@
             <p>答对：掌握度上升并顺延到期时间；答错：掌握度下降、今天重新排队，知识点写入薄弱点记忆。</p>
             <button class="linkbtn" type="button" id="resetBtn">重置演示数据</button>
           </div>
+        </div>
+
+        <!-- 录入错题（数据持久化） -->
+        <div class="card panel" style="grid-column:1/-1">
+          <div class="panel-head">
+            <h3>录入错题</h3>
+            <p>新增题目会写入浏览器本地存储，刷新页面后仍能检索；接入后端时同一份数据写入 seekdb。</p>
+          </div>
+          <div class="search" style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="addStem" type="text" placeholder="题干，例如：求矩阵 A 的特征值…" style="flex:2 1 320px">
+            <input id="addSubject" type="text" placeholder="科目，例如：线性代数" style="flex:1 1 140px">
+            <input id="addKnowledge" type="text" placeholder="知识点，例如：特征值" style="flex:1 1 140px">
+            <button class="btn" type="button" id="addBtn">录入并保存</button>
+          </div>
+          <p class="result-meta" id="addStatus" aria-live="polite">录入后立即可检索；数据保存在本浏览器，刷新不丢失。</p>
         </div>
       </div>
     </div>
@@ -755,6 +770,30 @@
   var answered = {ok:0, no:0};
   var REVIEW_SIZE = 5;
   var STRONG = 18;                  // 命中阈值
+  var STORE_KEY = "study-buddy.state.v1";
+
+  /* ---------------- 数据 / 记忆持久化 ----------------
+     浏览器本地存储保存题库、掌握度、到期时间与薄弱点记忆，
+     刷新或重新打开页面后仍可读回并继续使用。 */
+  function saveState(){
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        bank: BANK, weak: weak, answered: answered, savedAt: new Date().toISOString()
+      }));
+    }catch(e){}
+  }
+  (function restoreState(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return;
+      var saved = JSON.parse(raw);
+      if(saved && saved.bank && saved.bank.length){
+        BANK = saved.bank;
+        weak = saved.weak || Object.create(null);
+        answered = saved.answered || {ok:0, no:0};
+      }
+    }catch(e){}
+  })();
 
   /* ---------------- 工具 ---------------- */
   function esc(s){
@@ -953,9 +992,12 @@
 
   function renderWeak(){
     var keys = Object.keys(weak);
-    if(!keys.length){ weakBox.hidden = true; return; }
-    keys.sort(function(a,b){ return weak[b] - weak[a]; });
     weakBox.hidden = false;
+    if(!keys.length){
+      weakList.innerHTML = '<li>暂无薄弱点。答错任意一题后，知识点会写入这里，刷新页面后仍然保留。</li>';
+      return;
+    }
+    keys.sort(function(a,b){ return weak[b] - weak[a]; });
     weakList.innerHTML = keys.map(function(k){
       var repeated = weak[k] >= 2;
       return "<li>" + (repeated ? '<span class="repeat">反复答错 </span>' : "") +
@@ -1000,6 +1042,7 @@
         weak[t] = (weak[t] || 0) + 1;
       }
     }
+    saveState();
     renderReview();
     if(input.value.trim()) renderSearch(input.value);
   }
@@ -1032,8 +1075,38 @@
     BANK = seed();
     weak = Object.create(null);
     answered = {ok:0, no:0};
+    try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+    saveState();
     renderReview();
     if(input.value.trim()) renderSearch(input.value); else renderAll();
+  });
+
+  $("addBtn").addEventListener("click", function(){
+    var stem = $("addStem").value.trim();
+    var subject = $("addSubject").value.trim() || "未分类";
+    var knowledge = $("addKnowledge").value.trim() || subject;
+    if(!stem){
+      $("addStatus").textContent = "请先填写题干，再点「录入并保存」。";
+      return;
+    }
+    BANK.push({
+      id: "u_" + Date.now().toString(36),
+      subject: subject,
+      stem: stem,
+      tags: [knowledge],
+      mastery: 50,
+      due: 0,
+      wrong: 0,
+      right: 0
+    });
+    saveState();
+    $("addStem").value = "";
+    $("addStatus").textContent = "已录入并保存：「" + stem.slice(0, 24) + "」— 刷新页面后仍可检索。";
+    renderAll();
+    renderReview();
+    input.value = knowledge;
+    clearBtn.hidden = false;
+    renderSearch(knowledge);
   });
 
   var now = new Date();

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { openStore, count, list, get, upsert, remove, search } from './lib/store.mjs';
 import { planReview, recordReview, weakItems } from './lib/review.mjs';
-import { health as pcHealth, rememberWeakPoint, recallWeakPoints, allMemories } from './lib/powercontext.mjs';
+import { health as pcHealth, remember, rememberWeakPoint, recallWeakPoints, allMemories } from './lib/powercontext.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.join(HERE, 'web');
@@ -125,17 +125,16 @@ async function route(req, res) {
 
   if (pathname === '/api/review' && req.method === 'POST') {
     const body = await readBody(req);
-    const result = recordReview(list(), body.id, Boolean(body.correct));
-    if (!result) return json(res, 404, { ok: false, error: 'item not found' });
-    let memory = null;
-    if (result.weak) {
-      memory = await rememberWeakPoint({
-        subject: result.item.subject,
-        knowledge: result.item.knowledge,
-        title: result.item.title,
-        correct: false,
-      });
-    }
+    const id = body.id ?? body.itemId ?? body.questionId;
+    const correct = Boolean(body.correct ?? body.isCorrect ?? body.ok);
+    const result = recordReview(list(), id, correct);
+    if (!result) return json(res, 404, { ok: false, error: 'item not found', id });
+    const memory = await rememberWeakPoint({
+      subject: result.item.subject,
+      knowledge: result.item.knowledge,
+      title: result.item.title,
+      correct,
+    });
     return json(res, 200, { ok: true, ...result, memory });
   }
 
@@ -145,8 +144,24 @@ async function route(req, res) {
     return json(res, 200, { ok: true, ...memories, weakItems: weakItems(list()) });
   }
 
-  if (pathname === '/api/memories') {
-    return json(res, 200, { ok: true, memories: allMemories() });
+  if ((pathname === '/api/memories' || pathname === '/memory/all') && req.method === 'GET') {
+    return json(res, 200, { ok: true, memories: allMemories(), total: allMemories().length });
+  }
+
+  if (pathname === '/memory/remember' && req.method === 'POST') {
+    const body = await readBody(req);
+    const result = await remember({
+      text: body.text || body.content || '',
+      kind: body.kind || 'note',
+      metadata: body.metadata || {},
+    });
+    return json(res, 200, result);
+  }
+
+  if ((pathname === '/memory/search' || pathname === '/memory/recall') && req.method === 'POST') {
+    const body = await readBody(req);
+    const result = await recallWeakPoints(body.query || body.q || '', Number(body.limit) || 5);
+    return json(res, 200, result);
   }
 
   if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {

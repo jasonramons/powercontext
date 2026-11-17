@@ -18,7 +18,7 @@ node server.mjs          # 默认 http://127.0.0.1:8080（未设置 PORT 时同�
 npm test
 ```
 
-预期输出（9 项全部 ok）：
+预期输出（11 项全部 ok）：
 
 ```
 ok   health (items=24 backend=memory-hybrid)
@@ -29,8 +29,10 @@ ok   plan generated (cards=10)
 ok   plan sorted
 ok   wrong answer lowers mastery (0.46 -> 0.31)
 ok   weak point recalled (薄弱点：TCP 三次握手（计算机基础）最近答错…)
+ok   written data read back (冒烟测试题)
+ok   memory read back (记忆读回测试 QWERTYUIOP)
 ok   site served
-{"passed":9,"total":9}
+{"passed":11,"total":11}
 ```
 
 ## 逐项验证
@@ -77,7 +79,17 @@ curl "http://127.0.0.1:8080/api/weak-points?q=TCP"
 
 返回 `memories`（PowerContext 记忆条目）与 `weakItems`（当前掌握度低于 0.45 的题目）。
 
-### 5. 项目网站
+### 5. 数据与记忆的读回 / 复用
+
+- 站点：录入一道新题 → 刷新页面 → 题目仍在且可通过知识点检索；答错一题 → 刷新页面 → 薄弱点记录与作答统计仍在（浏览器 `localStorage`）。
+- 服务端：`POST /api/items` 写入的题目可被 `GET /api/search` 立即检索；`POST /memory/remember` 写入的记忆可被 `POST /memory/search` 读回；重启进程后 `data/*.json` 中的题库、进度与记忆仍然存在。
+
+```bash
+curl -X POST http://127.0.0.1:8080/memory/remember -H "content-type: application/json" -d "{\"kind\":\"weak-point\",\"text\":\"记忆读回测试 QWERTY\"}"
+curl -X POST http://127.0.0.1:8080/memory/search -H "content-type: application/json" -d "{\"query\":\"QWERTY\",\"limit\":3}"
+```
+
+### 6. 项目网站
 
 Qoder Sites 公开发布地址：<https://study-buddy-c6tk39df1r0.qoder.zone/>
 

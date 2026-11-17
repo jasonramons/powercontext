@@ -28,7 +28,7 @@ docker run --rm -p 8080:8080 study-buddy
 ## 验证
 
 ```bash
-# 自检：启动服务并对 9 项核心能力做端到端断言
+# 自检：启动服务并对 11 项核心能力做端到端断言
 npm test
 
 # 手动验证
@@ -87,4 +87,5 @@ Node.js HTTP 服务（server.mjs，零依赖）
 
 - 示例数据覆盖高数、线代、英语、计算机基础四门共 24 题。
 - 向量由 `lib/embed.mjs` 离线生成，不下载模型、不需要 API Key。
-- 站点是自包含单文件，不引用任何外部图片、字体或 CDN。
+- 站点是自包含单文件，不引用任何外部图片、字体或 CDN；录入的题目、掌握度与薄弱点记忆保存在浏览器 `localStorage`，刷新或重新打开页面后仍可读回并继续使用。
+- 服务端把题库、复习进度与 PowerContext 记忆分别持久化到 `data/items.json`、`data/progress.json`、`data/powercontext.json`，进程重启后可继续使用。

@@ -61,6 +61,32 @@ try {
   const weak = await (await fetch(`${base}/api/weak-points?q=${encodeURIComponent(before.knowledge)}`)).json();
   check('weak point recalled', Array.isArray(weak.memories) && weak.memories.length >= 1, weak.memories?.[0]?.text?.slice(0, 40));
 
+  const added = await (
+    await fetch(`${base}/api/items`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: 'smoke_001', title: '冒烟测试题', subject: '测试', knowledge: '持久化', prompt: '唯一关键词 ZQXPLM 的题目' }),
+    })
+  ).json();
+  const found = await (await fetch(`${base}/api/search?q=ZQXPLM`)).json();
+  check('written data read back', added.ok && found.results[0]?.id === 'smoke_001', found.results[0]?.title);
+
+  const memWrite = await (
+    await fetch(`${base}/memory/remember`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'weak-point', text: '记忆读回测试 QWERTYUIOP' }),
+    })
+  ).json();
+  const memRead = await (
+    await fetch(`${base}/memory/search`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: 'QWERTYUIOP', limit: 3 }),
+    })
+  ).json();
+  check('memory read back', memWrite.ok && memRead.memories?.length >= 1, memRead.memories?.[0]?.text);
+
   const page = await (await fetch(`${base}/`)).text();
   check('site served', page.includes('Study Buddy') && page.includes('seekdb'));
 
