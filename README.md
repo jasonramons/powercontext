@@ -27,6 +27,16 @@ npm run bridge
 `npm install` 成功后 `/api/health` 的 `backend` 为 `seekdb`（真实嵌入式 seekdb + HNSW 向量索引 + 关键词子句 + RRF 融合检索）；
 若原生 SDK 在当前平台不可用，会自动降级为同等契约的进程内混合索引，`backend` 为 `memory-hybrid`，服务与接口保持不变。
 
+### 线上站点与本机后端的联动
+
+Qoder Sites 上的项目站点会自动探测本机后端（依次尝试 `127.0.0.1:8080 / 3000 / 8123 / 8000`）：
+
+- 检测到后端时，页面顶部显示「已连接本地后端：seekdb HNSW 混合检索 + PowerContext 记忆桥」；
+- 检索、录入错题、答对/答错会直接调用后端接口，数据写入 seekdb 与 PowerContext，刷新页面或重启后端后可读回；
+- 未检测到后端时自动退回浏览器本地演示数据（localStorage），页面仍可用。
+
+后端已开启 CORS 与 Private Network Access 响应头，允许 `https://*.qoder.zone` / `https://*.qoder.site` 页面调用 `http://127.0.0.1:*`。
+
 ### Docker
 
 ```bash

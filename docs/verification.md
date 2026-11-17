@@ -93,7 +93,16 @@ curl -X POST http://127.0.0.1:8766/memory/remember -H "content-type: application
 curl -X POST http://127.0.0.1:8766/memory/search -H "content-type: application/json" -d "{\"query\":\"QWERTY\",\"limit\":3}"
 ```
 
-### 6. 项目网站
+### 6. 站点 ↔ 本机后端（写入 → 刷新/重启 → 读回）
+
+1. 本机启动 `node server.mjs`（`/api/health` 返回 `backend=seekdb`）。
+2. 打开 Qoder Sites 站点（或 `http://127.0.0.1:8080/`），页面顶部应显示「已连接本地后端」。
+3. 在「录入错题」中新增一道题，或在「今日复习」中点「答错」。
+4. `curl http://127.0.0.1:8080/api/items` 应能看到新题；`curl http://127.0.0.1:8080/api/memories` 应能看到薄弱点记忆。
+5. 重启后端（Ctrl+C 后重新 `node server.mjs`），再次查询以上两个接口，数据与记忆仍在。
+6. 刷新页面，新题与薄弱点仍会从后端同步回来。
+
+### 7. 项目网站
 
 Qoder Sites 公开发布地址：<https://study-buddy-c6tk39df1r0.qoder.zone/>
 

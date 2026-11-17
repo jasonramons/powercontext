@@ -450,6 +450,7 @@
         <p class="kicker">01 / Live demo</p>
         <h2>试一试：检索一道相似题，再完成今天的复习</h2>
         <p class="section-sub">下面两块面板都在你的浏览器里真实运行，数据保存在本地存储，刷新后仍可读回。检索用关键词命中 + 特征相似度排序；复习面板会随「答对 / 答错」更新掌握度、到期时间与薄弱点记录。</p>
+      <p id="backendStatus" style="margin:12px 0 0;font-size:13px;line-height:1.6;color:#9ca3af">正在检测本地后端（seekdb / PowerContext）…</p>
       </div>
 
       <div class="demo-grid">
@@ -1042,6 +1043,9 @@
         weak[t] = (weak[t] || 0) + 1;
       }
     }
+    if(BACKEND){
+      fetch(BACKEND + "/api/review", {method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body: JSON.stringify({id:id, correct: act === "ok"})}).catch(function(){});
+    }
     saveState();
     renderReview();
     if(input.value.trim()) renderSearch(input.value);
@@ -1099,6 +1103,9 @@
       wrong: 0,
       right: 0
     });
+    if(BACKEND){
+      fetch(BACKEND + "/api/items", {method:"POST", mode:"cors", headers:{"content-type":"application/json"}, body: JSON.stringify({id: BANK[BANK.length-1].id, title: stem, prompt: stem, subject: subject, knowledge: knowledge})}).catch(function(){});
+    }
     saveState();
     $("addStem").value = "";
     $("addStatus").textContent = "已录入并保存：「" + stem.slice(0, 24) + "」— 刷新页面后仍可检索。";
@@ -1112,9 +1119,67 @@
   var now = new Date();
   planDate.textContent = now.getFullYear() + " 年 " + (now.getMonth()+1) + " 月 " + now.getDate() + " 日";
 
+  /* ---------------- 本地后端连接：seekdb + PowerContext ---------------- */
+  var BACKEND = null;
+  var BACKEND_PORTS = [8080, 3000, 8123, 8000];
+  function setBackendStatus(text, on){
+    var el = document.getElementById("backendStatus");
+    if(!el) return;
+    el.textContent = text;
+    el.style.color = on ? "#0f766e" : "#9ca3af";
+  }
+  function syncFromBackend(){
+    return fetch(BACKEND + "/api/items", {mode:"cors"})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if(!j.items || !j.items.length) return;
+        BANK = j.items.map(function(it){
+          return {id: it.id, subject: it.subject || "未分类", stem: it.prompt || it.title || it.id,
+                  tags: [it.knowledge || it.subject || "未分类"], mastery: 50, due: 0, wrong: 0, right: 0};
+        });
+        return fetch(BACKEND + "/api/plan?minutes=20", {mode:"cors"})
+          .then(function(r){ return r.json(); })
+          .then(function(p){
+            (p.cards || []).forEach(function(c){
+              for(var i=0;i<BANK.length;i++){
+                if(BANK[i].id === c.id){
+                  BANK[i].mastery = Math.round((c.mastery || 0) * 100);
+                  BANK[i].due = Math.round((new Date(c.dueAt).getTime() - Date.now()) / 86400000);
+                }
+              }
+            });
+          });
+      })
+      .then(function(){ renderAll(); renderReview(); if(input.value.trim()) renderSearch(input.value); })
+      .catch(function(){});
+  }
+  function probeBackend(){
+    var index = 0;
+    function next(){
+      if(index >= BACKEND_PORTS.length){
+        setBackendStatus("演示模式：未检测到本地后端，数据保存在本浏览器", false);
+        return;
+      }
+      var base = "http://127.0.0.1:" + BACKEND_PORTS[index++];
+      var controller = new AbortController();
+      var timer = setTimeout(function(){ controller.abort(); }, 900);
+      fetch(base + "/api/health", {mode:"cors", signal: controller.signal})
+        .then(function(r){ clearTimeout(timer); if(!r.ok) throw new Error("bad status"); return r.json(); })
+        .then(function(health){
+          BACKEND = base;
+          var engine = health.backend === "seekdb" ? "seekdb HNSW 混合检索" : "混合检索";
+          setBackendStatus("已连接本地后端：" + engine + " + PowerContext 记忆桥（写入后端，重启后可读回）", true);
+          return syncFromBackend();
+        })
+        .catch(function(){ clearTimeout(timer); next(); });
+    }
+    next();
+  }
+
   /* ---------------- 初始渲染 ---------------- */
   renderAll();
   renderReview();
+  probeBackend();
 })();
 </script>
 <script data-qoder-watermark="v1" data-url="https://qoder.cn">(() => {

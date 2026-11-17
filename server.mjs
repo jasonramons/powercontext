@@ -1,4 +1,4 @@
-import http from 'node:http';
+﻿import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,15 +27,25 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
 };
 
-function json(res, status, body) {
+function corsHeaders(req) {
+  const origin = req.headers.origin;
+  return {
+    'access-control-allow-origin': origin || '*',
+    'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
+    'access-control-allow-headers': 'content-type,accept',
+    'access-control-allow-private-network': 'true',
+    'access-control-max-age': '600',
+    vary: 'Origin',
+  };
+}
+
+function json(req, res, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'content-length': Buffer.byteLength(payload),
     'cache-control': 'no-store',
-    'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'GET,POST,DELETE,OPTIONS',
-    'access-control-allow-headers': 'content-type',
+    ...corsHeaders(req),
   });
   res.end(payload);
 }
@@ -58,15 +68,15 @@ function readBody(req) {
   });
 }
 
-function serveFile(res, filePath) {
+function serveFile(req, res, filePath) {
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(WEB_DIR + path.sep) && resolved !== path.join(WEB_DIR, 'index.html')) {
-    json(res, 403, { ok: false, error: 'forbidden' });
+    json(req, res, 403, { ok: false, error: 'forbidden' });
     return;
   }
   fs.stat(resolved, (error, stat) => {
     if (error || !stat.isFile()) {
-      json(res, 404, { ok: false, error: 'not found' });
+      json(req, res, 404, { ok: false, error: 'not found' });
       return;
     }
     res.writeHead(200, {
@@ -84,11 +94,11 @@ async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
   const pathname = decodeURIComponent(url.pathname);
 
-  if (req.method === 'OPTIONS') return json(res, 204, {});
+  if (req.method === 'OPTIONS') return json(req, res, 204, {});
 
   if (pathname === '/api/health') {
     const pc = await pcHealth();
-    return json(res, 200, {
+    return json(req, res, 200, {
       ok: true,
       name: 'study-buddy',
       version: '1.0.0',
@@ -100,28 +110,28 @@ async function route(req, res) {
   }
 
   if (pathname === '/api/items' && req.method === 'GET') {
-    return json(res, 200, { ok: true, items: list({ subject: url.searchParams.get('subject') || undefined }) });
+    return json(req, res, 200, { ok: true, items: list({ subject: url.searchParams.get('subject') || undefined }) });
   }
   if (pathname === '/api/items' && req.method === 'POST') {
     const body = await readBody(req);
     const item = await upsert(body);
-    return json(res, 200, { ok: true, item });
+    return json(req, res, 200, { ok: true, item });
   }
   if (pathname.startsWith('/api/items/') && req.method === 'DELETE') {
     const removed = await remove(pathname.slice('/api/items/'.length));
-    return json(res, removed ? 200 : 404, { ok: removed });
+    return json(req, res, removed ? 200 : 404, { ok: removed });
   }
 
   if (pathname === '/api/search') {
     const query = url.searchParams.get('q') || url.searchParams.get('query') || '';
     const topK = url.searchParams.get('topK') || url.searchParams.get('limit') || 6;
     const results = await search(query, { topK });
-    return json(res, 200, { ok: true, query, count: results.length, results });
+    return json(req, res, 200, { ok: true, query, count: results.length, results });
   }
 
   if (pathname === '/api/plan') {
     const minutes = url.searchParams.get('minutes') || 20;
-    return json(res, 200, { ok: true, ...planReview(list(), { minutes }) });
+    return json(req, res, 200, { ok: true, ...planReview(list(), { minutes }) });
   }
 
   if (pathname === '/api/review' && req.method === 'POST') {
@@ -129,24 +139,24 @@ async function route(req, res) {
     const id = body.id ?? body.itemId ?? body.questionId;
     const correct = Boolean(body.correct ?? body.isCorrect ?? body.ok);
     const result = recordReview(list(), id, correct);
-    if (!result) return json(res, 404, { ok: false, error: 'item not found', id });
+    if (!result) return json(req, res, 404, { ok: false, error: 'item not found', id });
     const memory = await rememberWeakPoint({
       subject: result.item.subject,
       knowledge: result.item.knowledge,
       title: result.item.title,
       correct,
     });
-    return json(res, 200, { ok: true, ...result, memory });
+    return json(req, res, 200, { ok: true, ...result, memory });
   }
 
   if (pathname === '/api/weak-points') {
     const query = url.searchParams.get('q') || '';
     const memories = await recallWeakPoints(query, 5);
-    return json(res, 200, { ok: true, ...memories, weakItems: weakItems(list()) });
+    return json(req, res, 200, { ok: true, ...memories, weakItems: weakItems(list()) });
   }
 
   if ((pathname === '/api/memories' || pathname === '/memory/all') && req.method === 'GET') {
-    return json(res, 200, { ok: true, memories: allMemories(), total: allMemories().length });
+    return json(req, res, 200, { ok: true, memories: allMemories(), total: allMemories().length });
   }
 
   if (pathname === '/memory/remember' && req.method === 'POST') {
@@ -156,32 +166,32 @@ async function route(req, res) {
       kind: body.kind || 'note',
       metadata: body.metadata || {},
     });
-    return json(res, 200, result);
+    return json(req, res, 200, result);
   }
 
   if ((pathname === '/memory/search' || pathname === '/memory/recall') && req.method === 'POST') {
     const body = await readBody(req);
     const result = await recallWeakPoints(body.query || body.q || '', Number(body.limit) || 5);
-    return json(res, 200, result);
+    return json(req, res, 200, result);
   }
 
   if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
-    return serveFile(res, path.join(WEB_DIR, 'index.html'));
+    return serveFile(req, res, path.join(WEB_DIR, 'index.html'));
   }
   if (req.method === 'GET' && pathname.startsWith('/web/')) {
-    return serveFile(res, path.join(WEB_DIR, pathname.slice('/web/'.length)));
+    return serveFile(req, res, path.join(WEB_DIR, pathname.slice('/web/'.length)));
   }
   if (req.method === 'GET' && /^\/(assets|static)\//.test(pathname)) {
-    return serveFile(res, path.join(WEB_DIR, pathname));
+    return serveFile(req, res, path.join(WEB_DIR, pathname));
   }
 
-  return json(res, 404, { ok: false, error: 'not found', path: pathname });
+  return json(req, res, 404, { ok: false, error: 'not found', path: pathname });
 }
 
 const server = http.createServer((req, res) => {
   route(req, res).catch((error) => {
     console.error('[study-buddy] request failed:', error);
-    json(res, 500, { ok: false, error: String(error.message || error) });
+    json(req, res, 500, { ok: false, error: String(error.message || error) });
   });
 });
 
@@ -194,7 +204,7 @@ server.listen(PORT, '0.0.0.0', () => {
 if (!process.env.PORT) {
   // The judge harness may probe either 8080 or 3000; serve both when free.
   http
-    .createServer((req, res) => route(req, res).catch((error) => json(res, 500, { ok: false, error: String(error) })))
+    .createServer((req, res) => route(req, res).catch((error) => json(req, res, 500, { ok: false, error: String(error) })))
     .listen(3000, '0.0.0.0', () => console.log('[study-buddy] secondary port http://127.0.0.1:3000'))
     .on('error', () => {});
 }
