@@ -87,6 +87,39 @@ try {
   ).json();
   check('memory read back', memWrite.ok && memRead.memories?.length >= 1, memRead.memories?.[0]?.text);
 
+  const scope = await (
+    await fetch(`${base}/v1/scopes`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ title: 'Study Buddy smoke', summary: 'smoke scope', idempotency_key: `smoke-${Date.now()}` }),
+    })
+  ).json();
+  const v1Write = await (
+    await fetch(`${base}/v1/memory/remember`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scope_id: scope.scope_id, kind: 'weak-point', text: 'V1 契约记忆 ASDFGHJKL' }),
+    })
+  ).json();
+  const v1Search = await (
+    await fetch(`${base}/v1/memory/search`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scope_id: scope.scope_id, query: 'ASDFGHJKL', limit: 5 }),
+    })
+  ).json();
+  const v1Prepare = await (
+    await fetch(`${base}/v1/context/prepare`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ scope_id: scope.scope_id, query: 'ASDFGHJKL', max_bytes: 2000 }),
+    })
+  ).json();
+  check('PowerContext v1 scope', Boolean(scope.scope_id));
+  check('PowerContext v1 remember', Boolean(v1Write.entry?.citation?.entry_id), v1Write.entry?.text);
+  check('PowerContext v1 search', (v1Search.hits || []).some((hit) => hit.text.includes('ASDFGHJKL')));
+  check('PowerContext v1 prepare', v1Prepare.status === 'ready' && (v1Prepare.content || '').includes('ASDFGHJKL'));
+
   const page = await (await fetch(`${base}/`)).text();
   check('site served', page.includes('Study Buddy') && page.includes('seekdb'));
 

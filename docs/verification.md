@@ -21,7 +21,7 @@ node server.mjs  # 默认 http://127.0.0.1:8080（未设置 PORT 时同时监听
 npm test
 ```
 
-预期输出（11 项全部 ok）：
+预期输出（15 项全部 ok）：
 
 ```
 ok   health (items=24 backend=seekdb)
@@ -34,8 +34,12 @@ ok   wrong answer lowers mastery (0.46 -> 0.31)
 ok   weak point recalled (薄弱点：TCP 三次握手（计算机基础）最近答错…)
 ok   written data read back (冒烟测试题)
 ok   memory read back (记忆读回测试 QWERTYUIOP)
+ok   PowerContext v1 scope
+ok   PowerContext v1 remember (V1 契约记忆 ASDFGHJKL)
+ok   PowerContext v1 search
+ok   PowerContext v1 prepare
 ok   site served
-{"passed":11,"total":11}
+{"passed":15,"total":15}
 ```
 
 ## 逐项验证

@@ -37,6 +37,24 @@ Qoder Sites 上的项目站点会自动探测本机后端（依次尝试 `127.0.
 
 后端已开启 CORS 与 Private Network Access 响应头，允许 `https://*.qoder.zone` / `https://*.qoder.site` 页面调用 `http://127.0.0.1:*`。
 
+### PowerContext v1 契约
+
+记忆桥实现了 PowerContext 1.4.x 的公开 HTTP 契约，并在 8080（主服务）与 8766（独立桥）同时可用：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/v1/scopes` | 创建 Scope（`title` / `summary` / `idempotency_key`） |
+| POST | `/v1/memory/remember` | 写入记忆（`scope_id` + `kind` + `text`） |
+| POST | `/v1/memory/search` | 检索记忆（`scope_id` + `query` + `limit`），返回 `hits[]` |
+| POST | `/v1/memory/entries/list` | 列出记忆条目 |
+| POST | `/v1/context/prepare` | 生成带字节预算的上下文（`scope_id` + `query` + `max_bytes`） |
+| POST | `/v1/sources/content` | 采集 Source（`scope_id` + `source_id` + `content`） |
+| GET | `/health/live`、`/health/ready` | 健康检查 |
+
+`scope_id` 持久化在 `data/powercontext-scope.json`，记忆条目持久化在 `data/powercontext-store.json`。
+因此「写入 → 重启 → 召回」可复现：重启后仍用同一 Scope，`/v1/memory/search` 与 `/v1/context/prepare` 都能读回此前写入的记忆。
+如果 8766 端口已经运行真实的 PowerContext 服务，本服务不会抢占端口，客户端会直接使用该服务。
+
 ### Docker
 
 ```bash

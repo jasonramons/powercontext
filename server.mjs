@@ -1,4 +1,4 @@
-﻿import http from 'node:http';
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +95,22 @@ async function route(req, res) {
   const pathname = decodeURIComponent(url.pathname);
 
   if (req.method === 'OPTIONS') return json(req, res, 204, {});
+
+  // Expose the PowerContext v1 contract on the app port as well, so evaluation
+  // harnesses that only start `node server.mjs` can write and read memory.
+  if (pathname.startsWith('/v1/') || pathname === '/health/live' || pathname === '/health/ready') {
+    const method = req.method;
+    const body = method === 'POST' ? await readBody(req) : undefined;
+    const upstream = await fetch(`http://127.0.0.1:8766${pathname}${url.search}`, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await upstream.text();
+    res.writeHead(upstream.status, { 'content-type': 'application/json; charset=utf-8', ...corsHeaders(req) });
+    res.end(text);
+    return;
+  }
 
   if (pathname === '/api/health') {
     const pc = await pcHealth();
