@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { openStore, count, list, get, upsert, remove, search } from './lib/store.mjs';
+import { openStore, count, list, get, upsert, remove, search, backendKind } from './lib/store.mjs';
 import { planReview, recordReview, weakItems } from './lib/review.mjs';
 import { health as pcHealth, remember, rememberWeakPoint, recallWeakPoints, allMemories } from './lib/powercontext.mjs';
 import { createBridge } from './bridge/server.mjs';
@@ -93,7 +93,7 @@ async function route(req, res) {
       name: 'study-buddy',
       version: '1.0.0',
       items: count(),
-      backend: process.env.USE_SEEKDB === '1' ? 'seekdb' : 'memory-hybrid',
+      backend: backendKind(),
       powercontext: pc,
       uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
     });

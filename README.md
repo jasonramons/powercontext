@@ -6,14 +6,13 @@
 - 项目网站（Qoder Sites 公开发布）：<https://study-buddy-c6tk39df1r0.qoder.zone/>
 - 赛题：2026 OceanBase 数据库大赛 · Qoder 赛道「用 Qoder 做一个让学习、科研和工作更高效的项目」
 
-## 运行（零依赖）
+## 运行
 
-需要 Node.js ≥ 20。**不需要 `npm install`**，项目只使用 Node 内置模块；所有依赖都不会与评测环境冲突。
+需要 Node.js ≥ 20。
 
 ```bash
-node server.mjs
-# 或
-npm start
+npm install      # 可选：安装 seekdb 原生 SDK（@oceanbase/seekdb-node + seekdb），失败也不影响启动
+node server.mjs  # 或 npm start
 ```
 
 启动后打开 <http://127.0.0.1:8080>。未设置 `PORT` 时会同时监听 8080 和 3000，方便评测脚本探测。
@@ -24,6 +23,9 @@ npm start
 npm run bridge
 # [powercontext-bridge] http://127.0.0.1:8766
 ```
+
+`npm install` 成功后 `/api/health` 的 `backend` 为 `seekdb`（真实嵌入式 seekdb + HNSW 向量索引 + 关键词子句 + RRF 融合检索）；
+若原生 SDK 在当前平台不可用，会自动降级为同等契约的进程内混合索引，`backend` 为 `memory-hybrid`，服务与接口保持不变。
 
 ### Docker
 
@@ -73,7 +75,7 @@ Node.js HTTP 服务（server.mjs，零依赖）
         └── PowerContext：薄弱点写入 / 召回（lib/powercontext.mjs，bridge/app.py）
 ```
 
-- **seekdb**：题目文档、向量与元数据写入 `study_items` 集合；检索时以 HNSW 余弦相似度为主信号，再叠加关键词包含加权。原开发机使用 `@oceanbase/seekdb-node` + `seekdb` SDK 实跑；由于该 SDK 的 Linux 可选依赖仍带 `workspace:` 协议，离线评测容器无法安装，`lib/store.mjs` 在 SDK 缺失时自动降级为同样契约的进程内混合索引，设置 `USE_SEEKDB=1` 即可切回真实 seekdb。
+- **seekdb**：题目文档、向量与元数据写入 `study_items` 集合；检索时以 HNSW 余弦相似度 + 关键词子句召回候选，再用 RRF 融合排序。`@oceanbase/seekdb-node` + `seekdb` 作为可选依赖安装，安装成功即走真实嵌入式 seekdb；若当前平台无法加载原生 SDK，`lib/store.mjs` 自动降级为同等契约的进程内混合索引，接口与数据结构不变。
 - **PowerContext**：`bridge/app.py` 把每次答错写成 `kind=weak-point` 的记忆；复习计划生成时按知识点召回并置顶提醒。桥未启动时使用本地 JSON 记忆（`lib/powercontext.mjs`），功能语义不变。
 - **Qoder**：项目在 Qoder 中完成需求拆解、代码生成、调试与站点发布，开发记录见 `docs/qoder-development-record.md`。
 

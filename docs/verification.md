@@ -2,15 +2,18 @@
 
 ## 环境
 
-- Node.js ≥ 20（本项目零运行时依赖，不需要 `npm install`）
-- 可选：`@oceanbase/seekdb-node` + `seekdb` SDK（`USE_SEEKDB=1` 时启用真实 seekdb）
-- 可选：Python 3.11+ 与 `powercontext[cli,server]`（启动 `bridge/app.py` 时启用真实 PowerContext）
+- Node.js ≥ 20
+- seekdb：`@oceanbase/seekdb-node` + `seekdb`（可选依赖，`npm install` 成功即启用；缺失时自动降级）
+- 可选：Python 3.11+ 与 `powercontext[cli,server]`（启动 `bridge/app.py` 时启用真实 PowerContext；Node 版记忆桥默认在 8766 端口提供同契约服务）
 
 ## 启动
 
 ```bash
-node server.mjs          # 默认 http://127.0.0.1:8080（未设置 PORT 时同时监听 3000）
+npm install      # 可选，安装 seekdb 原生 SDK
+node server.mjs  # 默认 http://127.0.0.1:8080（未设置 PORT 时同时监听 3000）
 ```
+
+启动日志应显示 `backend=seekdb`（或 SDK 不可用时的 `backend=memory-hybrid`），以及 `PowerContext bridge http://127.0.0.1:8766`。
 
 ## 端到端自检
 
@@ -21,7 +24,7 @@ npm test
 预期输出（11 项全部 ok）：
 
 ```
-ok   health (items=24 backend=memory-hybrid)
+ok   health (items=24 backend=seekdb)
 ok   seed loaded 24 items
 ok   search TCP top1 (TCP 三次握手的过程是什么？为什么两次握手不可以？)
 ok   search 洛必达 top1 (洛必达法则求极限)

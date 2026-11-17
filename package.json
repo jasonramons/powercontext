@@ -14,5 +14,9 @@
     "test": "node test/smoke.mjs",
     "seed": "node scripts/seed.mjs"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "optionalDependencies": {
+    "@oceanbase/seekdb-node": "1.4.0",
+    "seekdb": "1.4.0"
+  }
 }
