@@ -1,11 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = process.env.STUDY_DATA_DIR || path.join(HERE, '..', 'data');
+import { DATA_DIR, ensureSeed } from '../lib/paths.mjs';
 
-const seed = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'seed.json'), 'utf8'));
+const seed = JSON.parse(fs.readFileSync(ensureSeed(), 'utf8'));
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.writeFileSync(path.join(DATA_DIR, 'items.json'), JSON.stringify(seed, null, 2), 'utf8');
 

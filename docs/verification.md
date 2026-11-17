@@ -83,10 +83,11 @@ curl "http://127.0.0.1:8080/api/weak-points?q=TCP"
 
 - 站点：录入一道新题 → 刷新页面 → 题目仍在且可通过知识点检索；答错一题 → 刷新页面 → 薄弱点记录与作答统计仍在（浏览器 `localStorage`）。
 - 服务端：`POST /api/items` 写入的题目可被 `GET /api/search` 立即检索；`POST /memory/remember` 写入的记忆可被 `POST /memory/search` 读回；重启进程后 `data/*.json` 中的题库、进度与记忆仍然存在。
+- 记忆桥：启动时自动在 8766 端口提供 PowerContext 兼容契约，也可 `npm run bridge` 单独启动。
 
 ```bash
-curl -X POST http://127.0.0.1:8080/memory/remember -H "content-type: application/json" -d "{\"kind\":\"weak-point\",\"text\":\"记忆读回测试 QWERTY\"}"
-curl -X POST http://127.0.0.1:8080/memory/search -H "content-type: application/json" -d "{\"query\":\"QWERTY\",\"limit\":3}"
+curl -X POST http://127.0.0.1:8766/memory/remember -H "content-type: application/json" -d "{\"kind\":\"weak-point\",\"text\":\"记忆读回测试 QWERTY\"}"
+curl -X POST http://127.0.0.1:8766/memory/search -H "content-type: application/json" -d "{\"query\":\"QWERTY\",\"limit\":3}"
 ```
 
 ### 6. 项目网站
