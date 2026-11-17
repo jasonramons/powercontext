@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { openStore, count, list, get, upsert, remove, search } from './lib/store.mjs';
 import { planReview, recordReview, weakItems } from './lib/review.mjs';
 import { health as pcHealth, remember, rememberWeakPoint, recallWeakPoints, allMemories } from './lib/powercontext.mjs';
+import { createBridge } from './bridge/server.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.join(HERE, 'web');
@@ -197,3 +198,13 @@ if (!process.env.PORT) {
     .listen(3000, '0.0.0.0', () => console.log('[study-buddy] secondary port http://127.0.0.1:3000'))
     .on('error', () => {});
 }
+
+if (process.env.NO_BRIDGE !== '1') {
+  // PowerContext-compatible memory bridge on its documented port (8766). If a
+  // real Python bridge is already running there, keep it and only log.
+  const bridge = createBridge();
+  bridge
+    .listen(8766, '0.0.0.0', () => console.log('[study-buddy] PowerContext bridge http://127.0.0.1:8766'))
+    .on('error', (error) => console.log('[study-buddy] bridge port busy, keeping existing service:', error.code));
+}
+

@@ -17,12 +17,21 @@ npm start
 ```
 
 启动后打开 <http://127.0.0.1:8080>。未设置 `PORT` 时会同时监听 8080 和 3000，方便评测脚本探测。
+启动时会在 **8766** 端口同时拉起 PowerContext 兼容的记忆桥（`/health`、`/memory/remember`、`/memory/search`）。
+如果希望单独启动记忆桥：
+
+```bash
+npm run bridge
+# [powercontext-bridge] http://127.0.0.1:8766
+```
 
 ### Docker
 
 ```bash
 docker build -t study-buddy .
-docker run --rm -p 8080:8080 study-buddy
+docker run --rm -p 8080:8080 -p 8766:8766 study-buddy
+# 或
+docker compose up --build
 ```
 
 ## 验证
@@ -48,6 +57,8 @@ curl "http://127.0.0.1:8080/api/weak-points?q=TCP"
 | GET | `/api/plan?minutes=` | 按「薄弱度 × 紧迫度」生成今日复习清单 |
 | POST | `/api/review` | 记录答对/答错，更新掌握度与下次到期时间 |
 | GET | `/api/weak-points?q=` | 从 PowerContext 召回薄弱点记忆 |
+| POST | `/memory/remember` | 写入一条 PowerContext 记忆（桥契约） |
+| POST | `/memory/search` | 按关键词召回记忆（桥契约） |
 | GET | `/api/items` | 题库列表 |
 | POST | `/api/items` | 录入错题并写入索引 |
 

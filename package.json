@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
+    "bridge": "node bridge/server.mjs",
     "test": "node test/smoke.mjs",
     "seed": "node scripts/seed.mjs"
   },
