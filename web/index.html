@@ -421,7 +421,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
             在线体验
           </a>
-          <a class="btn ghost" href="https://github.com/jasonramons/powercontext/tree/feat/qoder-study-buddy" target="_blank" rel="noopener noreferrer">
+          <a class="btn ghost" href="https://github.com/jasonramons/powercontext/tree/qoder/study-buddy" target="_blank" rel="noopener noreferrer">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.69-.22.69-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.93.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
             查看源码
           </a>
@@ -449,7 +449,7 @@
       <div class="section-head">
         <p class="kicker">01 / Live demo</p>
         <h2>试一试：检索一道相似题，再完成今天的复习</h2>
-        <p class="section-sub">下面两块面板都在你的浏览器里真实运行。检索用关键词命中 + 字符二元组相似度排序；复习面板会随「答对 / 答错」更新掌握度、到期时间与薄弱点记录。</p>
+        <p class="section-sub">下面两块面板都在你的浏览器里真实运行，数据保存在本地存储，刷新后仍可读回。检索用关键词命中 + 特征相似度排序；复习面板会随「答对 / 答错」更新掌握度、到期时间与薄弱点记录。</p>
       </div>
 
       <div class="demo-grid">
@@ -460,7 +460,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
               相似题检索
             </h3>
-            <p>演示模式：本地排序（线上版本由 seekdb 完成 HNSW + 关键词混合检索）</p>
+            <p>知识点/关键词命中 + 向量相似度排序；完整版由 seekdb 完成 HNSW + 关键词混合检索</p>
           </div>
 
           <div class="search">
@@ -726,11 +726,11 @@
       <div>
         <h2>链接</h2>
         <div class="foot-links">
-          <a href="https://github.com/jasonramons/powercontext/tree/feat/qoder-study-buddy" target="_blank" rel="noopener noreferrer">项目仓库 · feat/qoder-study-buddy</a>
+          <a href="https://github.com/jasonramons/powercontext/tree/qoder/study-buddy" target="_blank" rel="noopener noreferrer">项目仓库 · feat/qoder-study-buddy</a>
           <a href="#demo">在线演示（相似题检索 + 今日复习）</a>
           <a href="#arch">技术架构说明</a>
         </div>
-        <p>本页面为静态演示站点，题库与复习数据均为内置示例，仅在浏览器本地计算，不发送任何请求。</p>
+        <p>演示页把题库、掌握度与薄弱点记忆持久化在浏览器本地，刷新后可读回；完整版通过 seekdb（HNSW + 关键词混合检索）与 PowerContext 记忆桥读写数据，接口见仓库 README。</p>
       </div>
     </div>
     <div class="award">
@@ -1001,8 +1001,8 @@
     weakList.innerHTML = keys.map(function(k){
       var repeated = weak[k] >= 2;
       return "<li>" + (repeated ? '<span class="repeat">反复答错 </span>' : "") +
-        "<b>" + esc(k) + "</b> · 累计答错 " + weak[k] + " 次" +
-        (repeated ? " · 已作为薄弱点置顶提醒" : " · 已写入 PowerContext") +
+        "<b>" + esc(k) + "</b> · 累计答错 " + weak[k] + " 次 · <span style=\"color:var(--site-muted)\">已持久化</span>" +
+        (repeated ? " · 已作为薄弱点置顶提醒，并写入 PowerContext" : " · 已写入 PowerContext") +
       "</li>";
     }).join("");
   }
