@@ -11,6 +11,8 @@ import { createBridge } from './bridge/server.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.join(HERE, 'web');
 const PORT = Number(process.env.PORT) || 8080;
+const BRIDGE_PORT = Number(process.env.BRIDGE_PORT) || 8766;
+const POWERCONTEXT_UPSTREAM = (process.env.POWERCONTEXT_URL || `http://127.0.0.1:${BRIDGE_PORT}`).replace(/\/$/, '');
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -101,7 +103,7 @@ async function route(req, res) {
   if (pathname.startsWith('/v1/') || pathname === '/health/live' || pathname === '/health/ready') {
     const method = req.method;
     const body = method === 'POST' ? await readBody(req) : undefined;
-    const upstream = await fetch(`http://127.0.0.1:8766${pathname}${url.search}`, {
+    const upstream = await fetch(`${POWERCONTEXT_UPSTREAM}${pathname}${url.search}`, {
       method,
       headers: { 'content-type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
@@ -230,7 +232,7 @@ if (process.env.NO_BRIDGE !== '1') {
   // real Python bridge is already running there, keep it and only log.
   const bridge = createBridge();
   bridge
-    .listen(8766, '0.0.0.0', () => console.log('[study-buddy] PowerContext bridge http://127.0.0.1:8766'))
+    .listen(BRIDGE_PORT, '0.0.0.0', () => console.log(`[study-buddy] PowerContext bridge http://127.0.0.1:${BRIDGE_PORT}`))
     .on('error', (error) => console.log('[study-buddy] bridge port busy, keeping existing service:', error.code));
 }
 

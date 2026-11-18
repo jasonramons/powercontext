@@ -55,20 +55,29 @@ Qoder Sites 上的项目站点会自动探测本机后端（依次尝试 `127.0.
 因此「写入 → 重启 → 召回」可复现：重启后仍用同一 Scope，`/v1/memory/search` 与 `/v1/context/prepare` 都能读回此前写入的记忆。
 如果 8766 端口已经运行真实的 PowerContext 服务，本服务不会抢占端口，客户端会直接使用该服务。
 
-### Docker
+### Docker（含真实 PowerContext 1.4.1）
 
 ```bash
-docker build -t study-buddy .
-docker run --rm -p 8080:8080 -p 8766:8766 study-buddy
-# 或
-docker compose up --build
+docker compose up --build -d
+# powercontext -> http://127.0.0.1:8010
+# study-buddy  -> http://127.0.0.1:8080
 ```
+
+`docker-compose.yml` 会启动两个服务：
+
+- `powercontext`：官方 `powercontext[cli,server]==1.4.1`，第 8010 端口，SQLite 数据卷；
+- `study-buddy`：本应用，`POWERCONTEXT_URL=http://powercontext:8010`，启动后自动创建/复用 Scope 并写入记忆。
+
+只想跑应用本体（不依赖 Docker）也可以：`node server.mjs` 会在 8766 端口拉起同契约的 Node 记忆桥。
 
 ## 验证
 
 ```bash
-# 自检：启动服务并对 11 项核心能力做端到端断言
+# 自检：启动服务并对 15 项核心能力做端到端断言
 npm test
+
+# 数据 / 记忆闭环：写入 -> 读回 -> 重启后端 -> 再读回
+npm run verify
 
 # 手动验证
 curl http://127.0.0.1:8080/api/health
@@ -76,6 +85,20 @@ curl "http://127.0.0.1:8080/api/search?q=TCP%20%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89
 curl "http://127.0.0.1:8080/api/plan?minutes=20"
 curl -X POST http://127.0.0.1:8080/api/review -H "content-type: application/json" -d "{\"id\":\"q_cs_001\",\"correct\":false}"
 curl "http://127.0.0.1:8080/api/weak-points?q=TCP"
+```
+
+`npm run verify` 会在隔离端口与临时数据目录启动后端，写入一条带随机标记的 PowerContext 记忆，读回一次，然后**重启后端进程**再读回一次，输出 8/8 通过：
+
+```
+PASS  backend healthy
+PASS  scope created
+PASS  memory written
+PASS  memory read back
+PASS  context prepared
+PASS  backend healthy after restart
+PASS  memory survived restart
+PASS  context survived restart
+{"passed":8,"total":8}
 ```
 
 接口：
